@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS.GG</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+/* ────────────────────────────────────────────────────────────
+   ROOT & RESET
+──────────────────────────────────────────────────────────── */
+:root {
+  --bg:#04050d; --bg2:#080a18; --c1:#e8ff47; --c2:#ff2d6b; --c3:#00e5ff; --c4:#b44dff;
+  --ink:#fff; --dim:rgba(255,255,255,.18); --faint:rgba(255,255,255,.06);
+  --mono:'Share Tech Mono',monospace; --sans:'Syne',sans-serif; --body:'DM Mono',monospace;
+  --acc:var(--c1); /* user-adjustable accent */
+  --profile-bg:#04050d; --profile-font:'Syne'; --card-radius:0px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow-x:hidden;cursor:none;}
+a{text-decoration:none;color:inherit;}
+button{font-family:inherit;}
+input,textarea{font-family:inherit;}
+input[type=color]{cursor:pointer;}
+
+/* ────────────────────────────────────────────────────────────
+   CURSOR
+──────────────────────────────────────────────────────────── */
+#cur,#cur2{position:fixed;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .15s,height .15s,background .2s,border-color .2s;}
+#cur{width:10px;height:10px;background:var(--acc);border-radius:50%;mix-blend-mode:difference;}
+#cur2{width:36px;height:36px;border:1px solid rgba(232,255,71,.35);border-radius:50%;}
+body.hov #cur{width:18px;height:18px;}
+body.hov #cur2{width:56px;height:56px;}
+/* cursor shape variants */
+body.cur-crosshair #cur{border-radius:0;transform:translate(-50%,-50%) rotate(45deg);}
+body.cur-star #cur{border-radius:0;clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);background:var(--acc);}
+body.cur-dot #cur2{display:none;}
+#scan{position:fixed;inset:0;pointer-events:none;z-index:8500;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.06) 3px,rgba(0,0,0,.06) 4px);animation:scanroll 14s linear infinite;}
+@keyframes scanroll{to{background-position:0 200px;}}
+/* bg effects */
+#bgfx{position:fixed;inset:0;pointer-events:none;z-index:0;transition:opacity .4s;}
+#bgfxCanvas{position:absolute;inset:0;width:100%;height:100%;}
+
+/* ────────────────────────────────────────────────────────────
+   PAGE SYSTEM
+──────────────────────────────────────────────────────────── */
+.page{display:none;min-height:100vh;position:relative;z-index:1;}
+.page.active{display:block;}
+
+/* ────────────────────────────────────────────────────────────
+   NAV
+──────────────────────────────────────────────────────────── */
+nav{position:fixed;top:0;left:0;right:0;z-index:5000;padding:16px 48px;display:flex;align-items:center;justify-content:space-between;background:rgba(4,5,13,.7);backdrop-filter:blur(16px);border-bottom:1px solid var(--faint);}
+.logo{font-family:var(--sans);font-size:20px;font-weight:800;color:var(--c1);cursor:pointer;text-shadow:0 0 20px rgba(232,255,71,.4);letter-spacing:-.5px;}
+.logo sup{font-size:10px;color:var(--c2);vertical-align:super;}
+.nav-links{display:flex;gap:4px;align-items:center;}
+.nav-r{display:flex;gap:8px;align-items:center;}
+
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:9px 18px;border:1px solid var(--dim);background:transparent;color:rgba(255,255,255,.55);cursor:pointer;transition:all .2s;border-radius:2px;}
+.pill:hover{border-color:var(--acc);color:var(--acc);}
+.pill.solid{background:var(--acc);color:#04050d;border-color:var(--acc);font-weight:700;}
+.pill.solid:hover{background:#fff;border-color:#fff;color:#04050d;}
+.pill.ghost{border-color:var(--c4);color:var(--c4);}
+.pill.ghost:hover{background:var(--c4);color:#04050d;}
+.pill.danger{border-color:var(--c2);color:var(--c2);}
+.pill.danger:hover{background:var(--c2);color:#fff;}
+
+/* ────────────────────────────────────────────────────────────
+   TOAST
+──────────────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(10,12,24,.95);border:1px solid var(--acc);backdrop-filter:blur(20px);padding:14px 28px;font-family:var(--mono);font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--acc);z-index:9990;transition:transform .35s cubic-bezier(.22,1,.36,1),opacity .35s;opacity:0;white-space:nowrap;}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* ────────────────────────────────────────────────────────────
+   MODAL BASE
+──────────────────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:8000;display:none;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--faint);padding:40px;max-width:520px;width:90%;max-height:90vh;overflow-y:auto;position:relative;animation:modalIn .3s cubic-bezier(.22,1,.36,1);}
+@keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(20px);}to{opacity:1;transform:none;}}
+.modal-close{position:absolute;top:16px;right:16px;background:transparent;border:1px solid var(--faint);color:rgba(255,255,255,.4);width:32px;height:32px;cursor:pointer;font-size:16px;transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.modal-close:hover{border-color:var(--c2);color:var(--c2);}
+.modal-title{font-family:var(--sans);font-size:22px;font-weight:800;letter-spacing:-1px;margin-bottom:8px;}
+.modal-sub{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.35);letter-spacing:2px;text-transform:uppercase;margin-bottom:28px;}
+
+/* ────────────────────────────────────────────────────────────
+   FIELD / FORM ELEMENTS
+──────────────────────────────────────────────────────────── */
+.field{margin-bottom:20px;}
+.field label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:8px;}
+.finput{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--faint);color:var(--ink);padding:12px 16px;font-family:var(--mono);font-size:13px;outline:none;transition:border-color .2s;}
+.finput:focus{border-color:rgba(232,255,71,.4);}
+.finput::placeholder{color:rgba(255,255,255,.2);}
+textarea.finput{resize:vertical;min-height:80px;}
+
+/* ────────────────────────────────────────────────────────────
+   LANDING PAGE
+──────────────────────────────────────────────────────────── */
+#landing{}
+.hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;overflow:hidden;position:relative;}
+.hero-left{padding:140px 60px 80px 80px;display:flex;flex-direction:column;justify-content:center;z-index:2;}
+.hero-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--c2);margin-bottom:28px;display:flex;align-items:center;gap:12px;}
+.hero-eyebrow::before{content:'';width:32px;height:1px;background:var(--c2);box-shadow:0 0 8px var(--c2);}
+.hero-h1{font-family:var(--sans);font-size:clamp(60px,7vw,104px);font-weight:800;line-height:.92;letter-spacing:-3px;margin-bottom:12px;}
+.hero-h1 .l1{display:block;}
+.hero-h1 .l2{display:block;color:transparent;-webkit-text-stroke:1.5px var(--c1);position:relative;}
+.hero-h1 .l2::after{content:attr(data-text);position:absolute;left:0;top:0;color:var(--c1);-webkit-text-stroke:0;clip-path:polygon(0 0,0 0,0 100%,0 100%);animation:reveal 2s .6s cubic-bezier(.77,0,.18,1) forwards;}
+@keyframes reveal{to{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);}}
+.hero-h1 .l3{display:block;font-size:.52em;letter-spacing:0;color:rgba(255,255,255,.4);}
+.hero-tagline{font-size:16px;color:rgba(255,255,255,.4);line-height:1.85;max-width:420px;margin:28px 0 44px;font-weight:300;}
+.hero-tagline strong{color:rgba(255,255,255,.75);font-weight:400;}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:48px;}
+.terminal{background:rgba(255,255,255,.03);border:1px solid rgba(232,255,71,.12);padding:20px 24px;font-family:var(--mono);font-size:13px;max-width:480px;}
+.terminal::before{content:'●  ●  ●';display:block;color:rgba(255,255,255,.18);font-size:10px;letter-spacing:4px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.05);}
+.t-line{margin-bottom:6px;line-height:1.6;}
+.tp{color:var(--c1);}.tc{color:rgba(255,255,255,.7);}.to{color:rgba(255,255,255,.3);padding-left:18px;}.thi{color:var(--c3);}
+.tcur::after{content:'█';color:var(--c1);animation:blink .9s step-end infinite;}
+@keyframes blink{50%{opacity:0;}}
+.hero-right{display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.hexbg{position:absolute;inset:-100px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='69'%3E%3Cpolygon points='30,1 59,16.5 59,52.5 30,68 1,52.5 1,16.5' fill='none' stroke='rgba(232,255,71,0.055)' stroke-width='1'/%3E%3C/svg%3E");background-size:60px 69px;animation:hexd 28s linear infinite;}
+@keyframes hexd{to{transform:translate(60px,69px);}}
+.float-card{width:290px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(20px);padding:28px 22px;position:relative;z-index:3;animation:cfloat 5s ease-in-out infinite;box-shadow:0 40px 80px rgba(0,0,0,.5);}
+@keyframes cfloat{0%,100%{transform:translateY(0) rotate(-1deg);}50%{transform:translateY(-10px) rotate(.5deg);}}
+.fc-stripe{position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3));}
+.fc-av{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--c4),var(--c2));display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:14px;box-shadow:0 0 0 3px rgba(255,255,255,.06);}
+.fc-name{font-family:var(--sans);font-size:16px;font-weight:800;letter-spacing:-.5px;margin-bottom:2px;}
+.fc-handle{font-family:var(--mono);font-size:10px;color:var(--c1);letter-spacing:1px;margin-bottom:18px;}
+.fc-lnk{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);padding:10px 12px;margin-bottom:7px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:8px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.fc-lnk:hover{background:rgba(232,255,71,.08);border-color:rgba(232,255,71,.2);}
+.fc-lnk::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--c1);transform:scaleY(0);transition:transform .2s;}
+.fc-lnk:hover::before{transform:scaleY(1);}
+
+/* Ticker */
+.ticker{overflow:hidden;border-top:1px solid var(--faint);border-bottom:1px solid var(--faint);padding:14px 0;white-space:nowrap;}
+.ticker-inner{display:inline-block;animation:tick 22s linear infinite;}
+.ti{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.2);margin:0 36px;}
+.ti span{color:var(--c1);margin-right:10px;}
+@keyframes tick{to{transform:translateX(-50%);}}
+
+/* Features */
+.features{padding:140px 80px;position:relative;overflow:hidden;}
+.feat-hdr{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:72px;gap:40px;}
+.feat-h2{font-family:var(--sans);font-size:clamp(32px,4vw,56px);font-weight:800;line-height:1;letter-spacing:-2px;}
+.feat-h2 em{font-style:normal;color:var(--c1);}
+.feat-sub{max-width:300px;font-size:13px;color:rgba(255,255,255,.3);line-height:1.9;text-align:right;font-weight:300;}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;}
+.feat-item{padding:44px 36px;border:1px solid var(--faint);position:relative;overflow:hidden;transition:border-color .3s;background:rgba(255,255,255,.015);cursor:default;}
+.feat-item:hover{border-color:rgba(255,255,255,.14);}
+.feat-item::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 110%,rgba(232,255,71,.055),transparent 60%);opacity:0;transition:opacity .4s;}
+.feat-item:hover::after{opacity:1;}
+.feat-num{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.18);letter-spacing:3px;margin-bottom:28px;}
+.feat-ico{font-size:32px;display:block;margin-bottom:16px;filter:saturate(0) brightness(1.4);transition:filter .3s;}
+.feat-item:hover .feat-ico{filter:none;}
+.feat-name{font-family:var(--sans);font-size:18px;font-weight:800;letter-spacing:-.4px;margin-bottom:10px;}
+.feat-desc{font-size:13px;color:rgba(255,255,255,.33);line-height:1.9;font-weight:300;}
+
+/* Pricing */
+.pricing{padding:120px 80px;text-align:center;}
+.pricing-h{font-family:var(--sans);font-size:clamp(32px,4vw,56px);font-weight:800;letter-spacing:-2px;margin-bottom:12px;}
+.pricing-sub{font-size:14px;color:rgba(255,255,255,.35);margin-bottom:60px;font-weight:300;}
+.pricing-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:780px;margin:0 auto 40px;}
+.pcard{background:rgba(255,255,255,.03);border:1px solid var(--faint);padding:40px 36px;text-align:left;position:relative;overflow:hidden;transition:border-color .3s;}
+.pcard:hover{border-color:rgba(255,255,255,.15);}
+.pcard.featured{border-color:rgba(232,255,71,.3);background:rgba(232,255,71,.03);}
+.pcard.featured::before{content:'BEST VALUE';position:absolute;top:16px;right:16px;font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--c1);border:1px solid rgba(232,255,71,.3);padding:3px 8px;}
+.pcard-badge{font-family:var(--mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:20px;}
+.pcard-price{font-family:var(--sans);font-size:48px;font-weight:800;letter-spacing:-2px;margin-bottom:8px;}
+.pcard-price sup{font-size:20px;vertical-align:super;font-weight:400;}
+.pcard-price sub{font-size:14px;vertical-align:baseline;font-weight:400;color:rgba(255,255,255,.35);}
+.pcard-tagline{font-size:13px;color:rgba(255,255,255,.35);margin-bottom:28px;font-weight:300;}
+.pcard-features{list-style:none;margin-bottom:32px;}
+.pcard-features li{font-family:var(--mono);font-size:12px;letter-spacing:.5px;padding:8px 0;border-bottom:1px solid var(--faint);color:rgba(255,255,255,.6);display:flex;align-items:center;gap:10px;}
+.pcard-features li::before{content:'✓';color:var(--c1);flex-shrink:0;}
+.pcard-features li.locked{color:rgba(255,255,255,.2);}
+.pcard-features li.locked::before{content:'✕';color:rgba(255,255,255,.15);}
+
+/* Marquee profiles */
+.marq-section{padding:100px 0;overflow:hidden;}
+.marq-h{font-family:var(--sans);font-size:clamp(26px,3vw,42px);font-weight:800;letter-spacing:-1.5px;margin-bottom:48px;padding:0 80px;}
+.marq-h em{font-style:normal;color:var(--c3);}
+.marq-row{display:flex;gap:14px;margin-bottom:14px;overflow:hidden;}
+.mq-inner{display:flex;gap:14px;animation:mq 28s linear infinite;white-space:nowrap;}
+.marq-row:nth-child(2) .mq-inner{animation-direction:reverse;}
+@keyframes mq{to{transform:translateX(-50%);}}
+.mq-card{background:rgba(255,255,255,.04);border:1px solid var(--faint);padding:18px 22px;min-width:210px;flex-shrink:0;display:flex;align-items:center;gap:12px;transition:border-color .2s;cursor:pointer;}
+.mq-card:hover{border-color:rgba(255,255,255,.14);}
+.mq-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.mq-n{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:-.3px;}
+.mq-h{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.3);letter-spacing:.5px;margin-top:2px;}
+
+/* CTA */
+.lnd-cta{padding:140px 80px;text-align:center;position:relative;overflow:hidden;}
+.lnd-cta::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 110%,rgba(232,255,71,.065),transparent 70%);}
+.lnd-cta-h{font-family:var(--sans);font-size:clamp(44px,6vw,90px);font-weight:800;line-height:.95;letter-spacing:-3px;margin-bottom:36px;position:relative;z-index:1;}
+.claim-row{display:inline-flex;border:1px solid rgba(255,255,255,.15);overflow:hidden;max-width:460px;width:100%;position:relative;z-index:1;}
+.claim-prefix{padding:15px 0 15px 18px;font-family:var(--mono);font-size:14px;color:var(--c1);}
+.claim-inp{flex:1;background:transparent;border:none;padding:15px 12px;color:var(--ink);font-family:var(--mono);font-size:14px;outline:none;}
+.claim-inp::placeholder{color:rgba(255,255,255,.2);}
+.claim-btn{background:var(--c1);color:#04050d;border:none;padding:0 24px;font-family:var(--mono);font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700;cursor:pointer;transition:background .2s;}
+.claim-btn:hover{background:#fff;}
+
+footer{padding:36px 80px;border-top:1px solid var(--faint);display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.2);}
+footer a{color:inherit;transition:color .2s;}
+footer a:hover{color:var(--c1);}
+
+/* ────────────────────────────────────────────────────────────
+   AUTH MODALS (Sign up / Log in)
+──────────────────────────────────────────────────────────── */
+.auth-tabs{display:flex;gap:4px;margin-bottom:28px;}
+.auth-tab{flex:1;padding:10px;background:transparent;border:1px solid var(--faint);color:rgba(255,255,255,.4);font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;}
+.auth-tab.on{background:var(--acc);color:#04050d;border-color:var(--acc);font-weight:700;}
+.social-auth{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;}
+.sauth-btn{padding:11px;background:rgba(255,255,255,.04);border:1px solid var(--faint);color:rgba(255,255,255,.6);font-family:var(--mono);font-size:11px;letter-spacing:1px;cursor:pointer;transition:all .2s;}
+.sauth-btn:hover{border-color:rgba(255,255,255,.2);color:var(--ink);}
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.2);letter-spacing:2px;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--faint);}
+
+/* ────────────────────────────────────────────────────────────
+   PROFILE PAGE
+──────────────────────────────────────────────────────────── */
+#profile{display:flex;align-items:center;justify-content:center;padding:100px 20px 60px;position:relative;}
+#particles{position:fixed;inset:0;z-index:0;}
+
+.profile-shell{width:100%;max-width:460px;position:relative;z-index:2;}
+.profile-card{
+  background:var(--profile-bg);
+  border:1px solid rgba(255,255,255,.1);
+  backdrop-filter:blur(24px);
+  padding:44px 36px 36px;
+  position:relative;
+  overflow:hidden;
+  border-radius:var(--card-radius);
+  animation:profIn .5s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes profIn{from{opacity:0;transform:translateY(24px) scale(.98);}to{opacity:1;transform:none;}}
+.profile-card::before{content:'';position:absolute;inset:0;background:linear-gradient(108deg,transparent 30%,rgba(232,255,71,.025) 44%,rgba(0,229,255,.03) 55%,rgba(180,77,255,.025) 66%,transparent 75%);background-size:200% 200%;animation:holoShift 7s ease-in-out infinite;pointer-events:none;}
+@keyframes holoShift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+.pc-topbar{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--c2),var(--c1),var(--c3),var(--c4));}
+
+/* Avatar */
+.pc-avwrap{width:96px;height:96px;margin:0 auto 18px;position:relative;}
+.pc-avwrap svg{position:absolute;inset:0;animation:spin 9s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.pc-av{position:absolute;inset:10px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:34px;background:linear-gradient(135deg,#1a0a2e,#0a1a2e);overflow:hidden;}
+.pc-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+
+.pc-center{text-align:center;}
+.pc-name{font-family:var(--sans);font-size:24px;font-weight:800;letter-spacing:-1px;margin-bottom:4px;}
+.pc-handle{font-family:var(--mono);font-size:11px;color:var(--c1);letter-spacing:2px;margin-bottom:12px;}
+.pc-bio{font-size:13px;color:rgba(255,255,255,.4);line-height:1.85;font-weight:300;max-width:340px;margin:0 auto 16px;}
+.pc-tags{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:28px;}
+.pc-tag{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.4);}
+
+/* Links */
+.pc-links{display:flex;flex-direction:column;gap:8px;margin-bottom:24px;}
+.pc-lnk{display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);cursor:pointer;position:relative;overflow:hidden;transition:all .25s;text-decoration:none;color:inherit;border-radius:var(--card-radius);animation:lslide .4s ease both;}
+.pc-lnk:nth-child(1){animation-delay:.08s;}.pc-lnk:nth-child(2){animation-delay:.15s;}.pc-lnk:nth-child(3){animation-delay:.22s;}.pc-lnk:nth-child(4){animation-delay:.29s;}.pc-lnk:nth-child(5){animation-delay:.36s;}.pc-lnk:nth-child(6){animation-delay:.43s;}
+@keyframes lslide{from{opacity:0;transform:translateX(-14px);}to{opacity:1;transform:none;}}
+.pc-lnk-glow{position:absolute;inset:0;opacity:0;transition:opacity .3s;pointer-events:none;}
+.pc-lnk:hover .pc-lnk-glow{opacity:1;}
+.pc-lnk:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.13);}
+.pc-lnk-ico{width:36px;height:36px;border-radius:calc(var(--card-radius) + 2px);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;transition:box-shadow .25s,background .25s;font-family:var(--mono);}
+.pc-lnk-txt{flex:1;}
+.pc-lnk-title{font-family:var(--sans);font-size:14px;font-weight:700;letter-spacing:-.3px;}
+.pc-lnk-sub{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.28);letter-spacing:.5px;margin-top:2px;}
+.pc-lnk-arr{font-size:13px;color:rgba(255,255,255,.2);transition:transform .2s,color .2s;}
+.pc-lnk:hover .pc-lnk-arr{transform:translateX(4px);}
+
+/* Socials */
+.pc-socials{display:flex;gap:8px;justify-content:center;margin-bottom:20px;}
+.pc-soc{width:38px;height:38px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;transition:all .2s;font-family:var(--mono);color:rgba(255,255,255,.45);border-radius:var(--card-radius);}
+.pc-soc:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.2);color:var(--ink);}
+
+.pc-foot{text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.14);cursor:pointer;transition:color .2s;padding-top:18px;border-top:1px solid rgba(255,255,255,.05);}
+.pc-foot:hover{color:var(--c1);}
+
+/* ────────────────────────────────────────────────────────────
+   DASHBOARD
+──────────────────────────────────────────────────────────── */
+#dashboard{}
+.dash{display:grid;grid-template-columns:228px 1fr;min-height:100vh;}
+.dsb{background:rgba(255,255,255,.02);border-right:1px solid var(--faint);padding:76px 0 32px;position:fixed;top:0;left:0;width:228px;height:100vh;overflow-y:auto;display:flex;flex-direction:column;}
+.dsb-user{padding:0 20px 24px;border-bottom:1px solid var(--faint);margin-bottom:18px;}
+.dsb-av{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--c4),var(--c2));display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:10px;box-shadow:0 0 18px rgba(180,77,255,.25);}
+.dsb-name{font-family:var(--sans);font-size:14px;font-weight:800;letter-spacing:-.3px;margin-bottom:2px;display:flex;align-items:center;gap:8px;}
+.dsb-badge{font-family:var(--mono);font-size:8px;letter-spacing:1px;padding:2px 6px;background:rgba(232,255,71,.12);border:1px solid rgba(232,255,71,.25);color:var(--c1);vertical-align:middle;}
+.dsb-url{font-family:var(--mono);font-size:10px;color:var(--c1);letter-spacing:1px;}
+.dsb-sec{font-family:var(--mono);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.18);padding:10px 20px 5px;}
+.dsb-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;color:rgba(255,255,255,.4);cursor:pointer;transition:all .15s;border-left:2px solid transparent;}
+.dsb-item:hover{color:rgba(255,255,255,.8);background:rgba(255,255,255,.03);}
+.dsb-item.on{color:var(--c1);border-left-color:var(--c1);background:rgba(232,255,71,.04);}
+.dsb-ic{font-size:13px;width:18px;text-align:center;flex-shrink:0;font-family:var(--mono);}
+.dsb-bottom{margin-top:auto;padding:16px 0 0;border-top:1px solid var(--faint);}
+.dsb-upgrade{margin:12px 20px 0;background:rgba(232,255,71,.07);border:1px solid rgba(232,255,71,.18);padding:14px;cursor:pointer;transition:all .2s;}
+.dsb-upgrade:hover{background:rgba(232,255,71,.12);}
+.dsb-up-label{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--c1);margin-bottom:4px;}
+.dsb-up-text{font-size:12px;color:rgba(255,255,255,.5);font-weight:300;}
+
+/* Panels */
+.dm{margin-left:228px;padding:88px 44px 44px;}
+.dm-hdr{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:36px;}
+.dm-h{font-family:var(--sans);font-size:32px;font-weight:800;letter-spacing:-1.5px;line-height:1;}
+.dm-h small{display:block;font-family:var(--mono);font-size:10px;font-weight:400;color:rgba(255,255,255,.25);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+.dm-meta{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.22);letter-spacing:1px;text-align:right;}
+
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+.kpi{padding:22px;background:rgba(255,255,255,.03);border:1px solid var(--faint);position:relative;overflow:hidden;transition:border-color .2s;cursor:default;}
+.kpi:hover{border-color:rgba(255,255,255,.11);}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1.5px;}
+.kpi:nth-child(1)::after{background:var(--c1);box-shadow:0 0 6px var(--c1);}
+.kpi:nth-child(2)::after{background:var(--c2);box-shadow:0 0 6px var(--c2);}
+.kpi:nth-child(3)::after{background:var(--c3);box-shadow:0 0 6px var(--c3);}
+.kpi:nth-child(4)::after{background:var(--c4);box-shadow:0 0 6px var(--c4);}
+.kpi-lbl{font-family:var(--mono);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.22);margin-bottom:12px;}
+.kpi-val{font-family:var(--sans);font-size:34px;font-weight:800;letter-spacing:-1.5px;line-height:1;margin-bottom:6px;}
+.kpi-d{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.28);}
+.kpi-d.up{color:#3dff8f;}
+.kpi-d.up::before{content:'↑ ';}
+
+.dm-grid{display:grid;grid-template-columns:1fr 320px;gap:16px;}
+.panel{background:rgba(255,255,255,.025);border:1px solid var(--faint);}
+.panel-hd{padding:15px 22px;border-bottom:1px solid var(--faint);display:flex;align-items:center;justify-content:space-between;}
+.panel-t{font-family:var(--mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.45);}
+.panel-bd{padding:22px;}
+
+.spark{display:flex;align-items:flex-end;gap:3px;height:72px;margin-bottom:20px;}
+.spark-b{flex:1;background:rgba(232,255,71,.14);cursor:pointer;transition:background .2s;position:relative;}
+.spark-b:hover{background:rgba(232,255,71,.5);}
+.spark-b:hover::after{content:attr(data-v);position:absolute;bottom:calc(100%+5px);left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:8px;color:var(--c1);white-space:nowrap;}
+
+/* Link editor */
+.le-item{display:flex;align-items:center;gap:11px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.035);cursor:default;}
+.le-item:last-child{border-bottom:none;}
+.le-drag{color:rgba(255,255,255,.14);cursor:grab;font-size:13px;flex-shrink:0;}
+.le-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.le-inf{flex:1;min-width:0;}
+.le-n{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.le-u{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.22);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+.le-clk{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.28);flex-shrink:0;}
+.le-tog{width:30px;height:17px;border-radius:8px;border:1px solid rgba(255,255,255,.1);position:relative;cursor:pointer;flex-shrink:0;transition:background .2s;}
+.le-tog::after{content:'';position:absolute;top:3px;left:3px;width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.2);transition:transform .2s,background .2s;}
+.le-tog.on{background:rgba(232,255,71,.18);border-color:rgba(232,255,71,.4);}
+.le-tog.on::after{transform:translateX(13px);background:var(--c1);}
+.le-edit,.le-del{width:26px;height:26px;background:transparent;border:1px solid var(--faint);color:rgba(255,255,255,.3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;font-family:var(--mono);}
+.le-edit:hover{border-color:var(--c3);color:var(--c3);}
+.le-del:hover{border-color:var(--c2);color:var(--c2);}
+.le-add-btn{width:100%;padding:11px;background:transparent;border:1px dashed rgba(255,255,255,.08);color:rgba(255,255,255,.2);font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;margin-top:10px;}
+.le-add-btn:hover{border-color:rgba(232,255,71,.3);color:var(--c1);background:rgba(232,255,71,.04);}
+
+/* Phone */
+.phone{width:176px;margin:0 auto;background:#050710;border:1.5px solid rgba(255,255,255,.1);border-radius:28px;overflow:hidden;box-shadow:0 28px 60px rgba(0,0,0,.55);}
+.phone::before{content:'';display:block;width:44px;height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin:14px auto 0;}
+.ph-scr{padding:16px 12px 18px;display:flex;flex-direction:column;align-items:center;}
+.ph-av{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--c4),var(--c2));display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:7px;}
+.ph-name{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:-.3px;margin-bottom:2px;}
+.ph-hdl{font-family:var(--mono);font-size:7px;color:var(--c1);letter-spacing:1px;margin-bottom:10px;}
+.ph-lnk{width:100%;height:24px;margin-bottom:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);display:flex;align-items:center;padding:0 8px;font-family:var(--mono);font-size:6.5px;color:rgba(255,255,255,.4);letter-spacing:.5px;}
+.ph-lnk::before{content:'→';margin-right:5px;color:var(--c1);font-size:7px;}
+
+/* Customization */
+.cust-section{display:none;}
+.cust-section.on{display:block;}
+.cust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;}
+.cust-opt{background:rgba(255,255,255,.03);border:2px solid var(--faint);padding:16px;cursor:pointer;transition:all .2s;text-align:center;}
+.cust-opt:hover{border-color:rgba(255,255,255,.15);}
+.cust-opt.on{border-color:var(--c1);background:rgba(232,255,71,.05);}
+.cust-opt-ico{font-size:24px;margin-bottom:8px;}
+.cust-opt-lbl{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.5);}
+.cust-opt.on .cust-opt-lbl{color:var(--c1);}
+.cust-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--faint);}
+.cust-row:last-child{border-bottom:none;}
+.cust-row-lbl{font-family:var(--mono);font-size:11px;letter-spacing:1px;color:rgba(255,255,255,.5);}
+.cust-row-ctrl{display:flex;gap:8px;align-items:center;}
+.color-swatch-pick{width:32px;height:32px;border-radius:2px;border:1px solid var(--faint);cursor:pointer;overflow:hidden;position:relative;}
+.color-swatch-pick input[type=color]{position:absolute;inset:-4px;width:calc(100%+8px);height:calc(100%+8px);opacity:0;cursor:pointer;}
+.color-swatch-pick .swatch-preview{width:100%;height:100%;}
+
+/* Premium locked overlay */
+.prem-lock{position:relative;}
+.prem-lock-overlay{position:absolute;inset:0;background:rgba(4,5,13,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(4px);}
+.prem-lock-ico{font-size:28px;margin-bottom:8px;}
+.prem-lock-text{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:12px;}
+
+/* ────────────────────────────────────────────────────────────
+   PREMIUM MODAL
+──────────────────────────────────────────────────────────── */
+.prem-modal .modal{max-width:580px;background:linear-gradient(135deg,#06071a,#0c0820);}
+.prem-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(232,255,71,.06),transparent 60%);pointer-events:none;}
+.prem-header{text-align:center;margin-bottom:32px;position:relative;z-index:1;}
+.prem-badge{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--c1);border:1px solid rgba(232,255,71,.3);padding:4px 12px;margin-bottom:16px;}
+.prem-price{font-family:var(--sans);font-size:64px;font-weight:800;letter-spacing:-3px;color:var(--c1);line-height:1;}
+.prem-price span{font-size:24px;font-weight:400;color:rgba(255,255,255,.4);letter-spacing:-1px;}
+.prem-period{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.35);letter-spacing:2px;margin-top:4px;}
+.prem-perks{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:24px 0;position:relative;z-index:1;}
+.perk{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);padding:16px;transition:border-color .2s;}
+.perk:hover{border-color:rgba(232,255,71,.2);}
+.perk-ico{font-size:20px;margin-bottom:8px;}
+.perk-name{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:-.3px;margin-bottom:4px;}
+.perk-desc{font-size:11px;color:rgba(255,255,255,.35);line-height:1.6;font-weight:300;}
+.prem-cta{width:100%;padding:16px;background:var(--c1);border:none;color:#04050d;font-family:var(--mono);font-size:13px;letter-spacing:2px;text-transform:uppercase;font-weight:700;cursor:pointer;transition:background .2s;position:relative;z-index:1;}
+.prem-cta:hover{background:#fff;}
+.prem-fine{text-align:center;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.2);letter-spacing:1px;margin-top:12px;position:relative;z-index:1;}
+
+/* ────────────────────────────────────────────────────────────
+   ADD LINK MODAL
+──────────────────────────────────────────────────────────── */
+.icon-picker{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:4px;}
+.icon-opt{width:100%;aspect-ratio:1;background:rgba(255,255,255,.04);border:1px solid var(--faint);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s;font-family:var(--mono);}
+.icon-opt:hover,.icon-opt.on{border-color:var(--c1);background:rgba(232,255,71,.08);}
+
+/* ────────────────────────────────────────────────────────────
+   EDIT PROFILE MODAL
+──────────────────────────────────────────────────────────── */
+.avatar-upload{width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.05);border:2px dashed rgba(255,255,255,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:border-color .2s;font-size:24px;position:relative;overflow:hidden;}
+.avatar-upload:hover{border-color:var(--c1);}
+.avatar-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+
+/* ────────────────────────────────────────────────────────────
+   SWATCHES
+──────────────────────────────────────────────────────────── */
+.sw-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+.sw{width:40px;height:40px;border-radius:3px;cursor:pointer;border:2px solid transparent;transition:border-color .2s,transform .15s;position:relative;overflow:hidden;}
+.sw:hover{transform:scale(1.1);}
+.sw.on{border-color:#fff;outline:1px solid rgba(255,255,255,.3);}
+.sw-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:6.5px;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.5);background:rgba(0,0,0,.4);opacity:0;transition:opacity .2s;}
+.sw:hover .sw-lbl,.sw.on .sw-lbl{opacity:1;}
+
+/* ────────────────────────────────────────────────────────────
+   TABS (dashboard)
+──────────────────────────────────────────────────────────── */
+.dash-tab-bar{display:flex;gap:2px;margin-bottom:24px;border-bottom:1px solid var(--faint);}
+.dash-tab{font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:10px 20px;cursor:pointer;color:rgba(255,255,255,.35);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;}
+.dash-tab:hover{color:rgba(255,255,255,.7);}
+.dash-tab.on{color:var(--c1);border-bottom-color:var(--c1);}
+.dash-panel{display:none;}.dash-panel.on{display:block;}
+
+/* ────────────────────────────────────────────────────────────
+   UTIL
+──────────────────────────────────────────────────────────── */
+.row{display:flex;gap:12px;align-items:center;}
+.gap16{gap:16px;}
+.mt16{margin-top:16px;}
+.mt24{margin-top:24px;}
+.flex1{flex:1;}
+.text-muted{color:rgba(255,255,255,.35);}
+.text-yellow{color:var(--c1);}
+.text-pink{color:var(--c2);}
+.text-blue{color:var(--c3);}
+.text-purple{color:var(--c4);}
+.premium-star{color:var(--c1);font-style:normal;}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
+
+/* responsive */
+@media(max-width:960px){
+  .hero{grid-template-columns:1fr;}.hero-right{display:none;}
+  .hero-left{padding:130px 28px 80px;}
+  .features,.pricing,.marq-section,.lnd-cta{padding:80px 28px;}
+  .feat-grid{grid-template-columns:1fr;}
+  .pricing-cards{grid-template-columns:1fr;}
+  .kpi-row{grid-template-columns:repeat(2,1fr);}
+  .dm-grid{grid-template-columns:1fr;}
+  .dsb{display:none;}.dm{margin-left:0;padding:80px 20px 40px;}
+  footer{padding:32px 28px;flex-direction:column;gap:12px;text-align:center;}
+  nav{padding:14px 20px;}
+}
+</style>
+</head>
+<body>
+
+<!-- cursors & fx -->
+<div id="cur"></div>
+<div id="cur2"></div>
+<div id="scan"></div>
+<div id="bgfx"><canvas id="bgfxCanvas"></canvas></div>
+
+<!-- toast -->
+<div id="toast"></div>
+
+<!-- NAV -->
+<nav id="mainNav">
+  <div class="logo" onclick="show('landing')">NEXUS<sup>.GG</sup></div>
+  <div class="nav-links">
+    <button class="pill" onclick="show('landing');scrollTo(0,0)">Home</button>
+    <button class="pill" id="navFeatures" onclick="show('landing');setTimeout(()=>document.getElementById('featSection').scrollIntoView({behavior:'smooth'}),50)">Features</button>
+    <button class="pill" id="navPricing" onclick="show('landing');setTimeout(()=>document.getElementById('pricingSection').scrollIntoView({behavior:'smooth'}),50)">Pricing</button>
+    <button class="pill" onclick="show('profile')">Demo</button>
+  </div>
+  <div class="nav-r">
+    <button class="pill" id="loginBtn" onclick="openModal('loginModal')">Log In</button>
+    <button class="pill solid" id="signupBtn" onclick="openModal('signupModal')">Get Started</button>
+    <button class="pill" id="dashBtn" onclick="show('dashboard')" style="display:none">Dashboard</button>
+    <button class="pill" id="logoutBtn" onclick="logout()" style="display:none;border-color:rgba(255,255,255,.2)">Log Out</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LANDING
+═══════════════════════════════════════════════════════════ -->
+<div id="landing" class="page active">
+
+  <section class="hero">
+    <div class="hero-left">
+      <div class="hero-eyebrow">Your link. Your world.</div>
+      <h1 class="hero-h1">
+        <span class="l1">ONE</span>
+        <span class="l2" data-text="LINK.">LINK.</span>
+        <span class="l3">Everything.</span>
+      </h1>
+      <p class="hero-tagline">A <strong>bio link</strong> that actually looks like you built it. Not a template. Not a Linktree. A page with a pulse.</p>
+      <div class="hero-cta">
+        <button class="pill solid" style="padding:12px 32px;font-size:13px" onclick="openModal('signupModal')">Claim your handle</button>
+        <button class="pill" style="padding:12px 26px" onclick="show('profile')">See demo →</button>
+      </div>
+      <div class="terminal">
+        <div class="t-line"><span class="tp">$ </span><span class="tc" id="tCmd"></span><span class="tcur" id="tCur"></span></div>
+        <div class="t-line to" id="tOut1"></div>
+        <div class="t-line to thi" id="tOut2"></div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hexbg"></div>
+      <div class="float-card">
+        <div class="fc-stripe"></div>
+        <div class="fc-av">👾</div>
+        <div class="fc-name">VOIDPILOT</div>
+        <div class="fc-handle">nexus.gg/voidpilot</div>
+        <div class="fc-lnk" onclick="show('profile')">♫&nbsp; Latest Track — NEON GHOST</div>
+        <div class="fc-lnk" onclick="show('profile')">▣&nbsp; Limited Merch Drop</div>
+        <div class="fc-lnk" onclick="show('profile')">▶&nbsp; YouTube — Behind the Build</div>
+        <div class="fc-lnk" onclick="show('profile')">#&nbsp; Discord Server</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="ticker"><div class="ticker-inner" id="tick"></div></div>
+
+  <section class="features" id="featSection">
+    <div class="feat-hdr">
+      <h2 class="feat-h2">Everything you need.<br><em>Nothing you don't.</em></h2>
+      <p class="feat-sub">No bloat. No upsells every three clicks. A blazing-fast, wildly customizable profile that converts.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat-item"><div class="feat-num">01</div><span class="feat-ico">⚡</span><div class="feat-name">Sub-second load</div><p class="feat-desc">Edge-deployed globally. Your profile loads before they blink. No spinners, no skeletons.</p></div>
+      <div class="feat-item" style="margin-top:40px"><div class="feat-num">02</div><span class="feat-ico">🎨</span><div class="feat-name">40+ themes</div><p class="feat-desc">Cyberpunk, minimal, Y2K, holographic — every aesthetic. Custom CSS for the brave.</p></div>
+      <div class="feat-item"><div class="feat-num">03</div><span class="feat-ico">📊</span><div class="feat-name">Deep analytics</div><p class="feat-desc">Per-link click tracking, geo heatmaps, device breakdowns, referrer chains.</p></div>
+      <div class="feat-item" style="margin-top:40px"><div class="feat-num">04</div><span class="feat-ico">🔗</span><div class="feat-name">Unlimited links</div><p class="feat-desc">No artificial caps. Stack your store, music, Patreon, Discord — everything in one signal.</p></div>
+      <div class="feat-item"><div class="feat-num">05</div><span class="feat-ico">🌐</span><div class="feat-name">Custom domain</div><p class="feat-desc">Bring your own domain. Fully SSL'd, fully yours, zero config headaches.</p></div>
+      <div class="feat-item" style="margin-top:40px"><div class="feat-num">06</div><span class="feat-ico">✦</span><div class="feat-name">Animations</div><p class="feat-desc">Particle fields, glitch bursts, gradient meshes. Your page moves. Theirs doesn't.</p></div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="pricing" id="pricingSection">
+    <h2 class="pricing-h">Simple pricing.</h2>
+    <p class="pricing-sub">Start free. Upgrade when you're ready to go all out.</p>
+    <div class="pricing-cards">
+      <div class="pcard">
+        <div class="pcard-badge text-muted">FREE</div>
+        <div class="pcard-price"><sup>$</sup>0<sub>/mo</sub></div>
+        <div class="pcard-tagline">Everything you need to get started.</div>
+        <ul class="pcard-features">
+          <li>1 profile page</li>
+          <li>Up to 8 links</li>
+          <li>5 themes</li>
+          <li>Basic analytics (7 days)</li>
+          <li>NEXUS branding</li>
+          <li class="locked">Custom domain</li>
+          <li class="locked">Animated backgrounds</li>
+          <li class="locked">Custom cursor styles</li>
+          <li class="locked">Priority support</li>
+          <li class="locked">Remove branding</li>
+        </ul>
+        <button class="pill solid" style="width:100%;padding:14px" onclick="openModal('signupModal')">Get Started Free</button>
+      </div>
+      <div class="pcard featured">
+        <div class="pcard-badge text-yellow">✦ NEXUS PRO</div>
+        <div class="pcard-price text-yellow"><sup>$</sup>9.99<sub>/mo</sub></div>
+        <div class="pcard-tagline">For creators who don't do boring.</div>
+        <ul class="pcard-features">
+          <li>Unlimited profiles</li>
+          <li>Unlimited links</li>
+          <li>40+ premium themes</li>
+          <li>Full analytics (unlimited history)</li>
+          <li>Remove NEXUS branding</li>
+          <li>Custom domain</li>
+          <li>Animated backgrounds (particles, mesh, glitch)</li>
+          <li>Custom cursor styles (12 options)</li>
+          <li>Custom fonts (20+ options)</li>
+          <li>Priority support</li>
+        </ul>
+        <button class="pill solid" style="width:100%;padding:14px;font-size:12px" onclick="openModal('premModal')">Upgrade to Pro — $9.99/mo</button>
+      </div>
+    </div>
+    <p class="text-muted" style="font-family:var(--mono);font-size:11px;letter-spacing:1px">Cancel anytime. No contracts. No BS.</p>
+  </section>
+
+  <!-- marquee -->
+  <section class="marq-section">
+    <h2 class="marq-h">Used by <em>creators</em> who<br>don't do boring.</h2>
+    <div class="marq-row" id="m1"></div>
+    <div class="marq-row" id="m2"></div>
+  </section>
+
+  <!-- CTA -->
+  <section class="lnd-cta">
+    <h2 class="lnd-cta-h">Claim it<br>before<br>they do.</h2>
+    <div class="claim-row">
+      <span class="claim-prefix">nexus.gg/</span>
+      <input class="claim-inp" id="claimInp" placeholder="yourname" onkeydown="if(event.key==='Enter')claimHandle()">
+      <button class="claim-btn" onclick="claimHandle()">→</button>
+    </div>
+  </section>
+
+  <footer>
+    <div class="logo" style="font-size:16px;cursor:pointer" onclick="show('landing')">NEXUS<sup>.GG</sup></div>
+    <div style="display:flex;gap:20px">
+      <a href="#" onclick="toast('Privacy policy coming soon')">Privacy</a>
+      <a href="#" onclick="toast('Terms of service coming soon')">Terms</a>
+      <a href="#" onclick="toast('API docs coming soon')">API</a>
+      <a href="#" onclick="toast('All systems nominal ✓')">Status</a>
+    </div>
+    <div>© 2026 NEXUS.GG — All systems nominal</div>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PROFILE PAGE
+═══════════════════════════════════════════════════════════ -->
+<div id="profile" class="page">
+  <canvas id="particles"></canvas>
+  <div class="profile-shell">
+    <div class="profile-card" id="profileCard">
+      <div class="pc-topbar"></div>
+      <div class="pc-center">
+        <div class="pc-avwrap">
+          <svg viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="48" cy="48" r="44" stroke="url(#rg)" stroke-width="1" stroke-dasharray="6 4"/>
+            <defs><linearGradient id="rg" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#e8ff47"/><stop offset="50%" stop-color="#ff2d6b"/><stop offset="100%" stop-color="#00e5ff"/></linearGradient></defs>
+          </svg>
+          <div class="pc-av" id="pcAvEl">👾</div>
+        </div>
+        <div class="pc-name" id="pcName">VOIDPILOT</div>
+        <div class="pc-handle" id="pcHandle">nexus.gg/voidpilot</div>
+        <div class="pc-bio" id="pcBio">Digital architect. Pushing pixels into the void since 2019. Music / code / chaos.</div>
+        <div class="pc-tags" id="pcTags">
+          <span class="pc-tag">Pro</span><span class="pc-tag">Verified</span><span class="pc-tag">Creator</span>
+        </div>
+      </div>
+      <div class="pc-links" id="pcLinks"></div>
+      <div class="pc-socials" id="pcSocials"></div>
+      <div class="pc-foot" onclick="openModal('premModal')">Powered by NEXUS.GG — Upgrade to Pro ✦</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DASHBOARD
+═══════════════════════════════════════════════════════════ -->
+<div id="dashboard" class="page">
+<div class="dash">
+  <aside class="dsb" id="sidebar">
+    <div class="dsb-user">
+      <div class="dsb-av" id="dsb-av-el">👾</div>
+      <div class="dsb-name" id="dsb-name-el">VOIDPILOT <span class="dsb-badge" id="dsb-plan-badge">FREE</span></div>
+      <div class="dsb-url" id="dsb-url-el">nexus.gg/voidpilot</div>
+    </div>
+    <div class="dsb-sec">// workspace</div>
+    <div class="dsb-item on" onclick="switchTab('overview')" id="tab-overview"><span class="dsb-ic">▣</span>Overview</div>
+    <div class="dsb-item" onclick="switchTab('links')" id="tab-links"><span class="dsb-ic">∞</span>Links</div>
+    <div class="dsb-item" onclick="switchTab('customize')" id="tab-customize"><span class="dsb-ic">◈</span>Customize</div>
+    <div class="dsb-item" onclick="switchTab('analytics')" id="tab-analytics"><span class="dsb-ic">△</span>Analytics</div>
+    <div class="dsb-item" onclick="switchTab('settings')" id="tab-settings"><span class="dsb-ic">⊞</span>Settings</div>
+    <div class="dsb-bottom">
+      <div class="dsb-item" onclick="show('profile')"><span class="dsb-ic">↗</span>View Profile</div>
+      <div class="dsb-item" onclick="show('landing')"><span class="dsb-ic">⌂</span>Home</div>
+      <div class="dsb-upgrade" id="dsbUpgrade" onclick="openModal('premModal')">
+        <div class="dsb-up-label">✦ Upgrade to Pro</div>
+        <div class="dsb-up-text">$9.99/mo — unlock everything</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="dm" id="dashMain">
+    <!-- OVERVIEW TAB -->
+    <div class="dash-panel on" id="panel-overview">
+      <div class="dm-hdr">
+        <div class="dm-h"><small>// workspace</small>Overview</div>
+        <div class="dm-meta" id="dashDate"></div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi"><div class="kpi-lbl">Profile views</div><div class="kpi-val" data-target="24831">0</div><div class="kpi-d up">12.4% this week</div></div>
+        <div class="kpi"><div class="kpi-lbl">Total clicks</div><div class="kpi-val" data-target="8402">0</div><div class="kpi-d up">8.1% this week</div></div>
+        <div class="kpi"><div class="kpi-lbl">Click rate</div><div class="kpi-val" data-target="338" data-fmt="pct">0</div><div class="kpi-d up">2.3pts vs last month</div></div>
+        <div class="kpi"><div class="kpi-lbl">Countries</div><div class="kpi-val" data-target="47">0</div><div class="kpi-d up">5 new regions</div></div>
+      </div>
+      <div class="dm-grid">
+        <div>
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-hd"><div class="panel-t">Traffic — 14 days</div><div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.2)">views/day</div></div>
+            <div class="panel-bd">
+              <div class="spark" id="sparkChart"></div>
+              <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.2)"><span>14d ago</span><span>today</span></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><div class="panel-t">Top Links</div></div>
+            <div class="panel-bd" id="topLinks"></div>
+          </div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-hd"><div class="panel-t">Live Preview</div><button class="pill" style="padding:5px 12px;font-size:10px" onclick="show('profile')">Open ↗</button></div>
+            <div class="panel-bd"><div class="phone"><div class="ph-scr" id="phonePreview"></div></div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><div class="panel-t">Quick Actions</div></div>
+            <div class="panel-bd" style="display:flex;flex-direction:column;gap:8px">
+              <button class="pill" style="width:100%;padding:11px;font-size:11px;text-align:left" onclick="switchTab('links');openAddLink()">+ Add new link</button>
+              <button class="pill" style="width:100%;padding:11px;font-size:11px;text-align:left" onclick="openModal('editProfileModal')">✏ Edit profile</button>
+              <button class="pill" style="width:100%;padding:11px;font-size:11px;text-align:left" onclick="switchTab('customize')">◈ Customize appearance</button>
+              <button class="pill" style="width:100%;padding:11px;font-size:11px;text-align:left" onclick="copyProfileLink()">⎘ Copy profile link</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINKS TAB -->
+    <div class="dash-panel" id="panel-links">
+      <div class="dm-hdr">
+        <div class="dm-h"><small>// workspace</small>Links</div>
+        <button class="pill solid" onclick="openAddLink()">+ Add Link</button>
+      </div>
+      <div class="panel">
+        <div class="panel-hd"><div class="panel-t">Your Links</div><span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.25)" id="linkCountLabel"></span></div>
+        <div class="panel-bd"><div id="leList"></div><button class="le-add-btn" onclick="openAddLink()">+ Add New Link</button></div>
+      </div>
+    </div>
+
+    <!-- CUSTOMIZE TAB -->
+    <div class="dash-panel" id="panel-customize">
+      <div class="dm-hdr">
+        <div class="dm-h"><small>// workspace</small>Customize</div>
+        <button class="pill solid" onclick="applyCustomization()">Save Changes</button>
+      </div>
+      <div class="dm-grid">
+        <div>
+          <!-- THEMES -->
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-hd"><div class="panel-t">Theme</div></div>
+            <div class="panel-bd">
+              <div class="sw-row" id="themeSwatches"></div>
+            </div>
+          </div>
+          <!-- COLORS -->
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-hd"><div class="panel-t">Colors</div></div>
+            <div class="panel-bd">
+              <div class="cust-row"><span class="cust-row-lbl">Accent color</span><div class="cust-row-ctrl"><div class="color-swatch-pick" id="accentSwatchPick"><div class="swatch-preview" id="accentPreview" style="background:var(--c1)"></div><input type="color" id="accentColor" value="#e8ff47" onchange="previewAccent(this.value)"></div><span style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.4)" id="accentHex">#E8FF47</span></div></div>
+              <div class="cust-row"><span class="cust-row-lbl">Background color</span><div class="cust-row-ctrl"><div class="color-swatch-pick" id="bgSwatchPick"><div class="swatch-preview" id="bgPreview" style="background:#04050d"></div><input type="color" id="bgColor" value="#04050d" onchange="previewBg(this.value)"></div><span style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.4)" id="bgHex">#04050D</span></div></div>
+              <div class="cust-row"><span class="cust-row-lbl">Card style</span><div class="cust-row-ctrl"><select class="finput" id="cardRadius" style="width:auto;padding:6px 10px;font-size:11px" onchange="previewCardRadius(this.value)"><option value="0px">Sharp</option><option value="6px">Rounded</option><option value="14px">Pill</option><option value="50px">Ultra Pill</option></select></div></div>
+            </div>
+          </div>
+          <!-- CURSOR -->
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-hd"><div class="panel-t">Cursor Style</div><span class="premium-star" style="font-size:11px;font-family:var(--mono)">✦ PRO</span></div>
+            <div class="panel-bd" id="cursorPanel">
+              <div class="cust-grid" id="cursorGrid" style="grid-template-columns:repeat(4,1fr)"></div>
+            </div>
+          </div>
+          <!-- BACKGROUND FX -->
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-hd"><div class="panel-t">Background Effect</div><span class="premium-star" style="font-size:11px;font-family:var(--mono)">✦ PRO</span></div>
+            <div class="panel-bd" id="bgfxPanel">
+              <div class="cust-grid" id="bgfxGrid"></div>
+            </div>
+          </div>
+          <!-- FONT -->
+          <div class="panel">
+            <div class="panel-hd"><div class="panel-t">Profile Font</div><span class="premium-star" style="font-size:11px;font-family:var(--mono)">✦ PRO</span></div>
+            <div class="panel-bd" id="fontPanel">
+              <div id="fontGrid" class="cust-grid" style="grid-template-columns:repeat(2,1fr)"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="panel" style="position:sticky;top:100px">
+            <div class="panel-hd"><div class="panel-t">Live Preview</div><button class="pill" style="padding:5px 12px;font-size:10px" onclick="show('profile')">Open ↗</button></div>
+            <div class="panel-bd"><div class="phone"><div class="ph-scr" id="custPhonePreview"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS TAB -->
+    <div class="dash-panel" id="panel-analytics">
+      <div class="dm-hdr">
+        <div class="dm-h"><small>// workspace</small>Analytics</div>
+        <div class="dm-meta">Last 30 days</div>
+      </div>
+      <div class="kpi-row" style="margin-bottom:28px">
+        <div class="kpi"><div class="kpi-lbl">Views today</div><div class="kpi-val">847</div><div class="kpi-d up">vs 731 yesterday</div></div>
+        <div class="kpi"><div class="kpi-lbl">Avg session</div><div class="kpi-val">1:24</div><div class="kpi-d up">+18s this week</div></div>
+        <div class="kpi"><div class="kpi-lbl">Top country</div><div class="kpi-val" style="font-size:22px">🇺🇸 US</div><div class="kpi-d">34% of traffic</div></div>
+        <div class="kpi"><div class="kpi-lbl">Top device</div><div class="kpi-val" style="font-size:22px">📱</div><div class="kpi-d">68% mobile</div></div>
+      </div>
+      <div class="dm-grid">
+        <div>
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-hd"><div class="panel-t">Views — 30 Days</div></div>
+            <div class="panel-bd">
+              <div class="spark" id="sparkLong" style="height:100px"></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><div class="panel-t">Link Click Breakdown</div></div>
+            <div class="panel-bd" id="linkBreakdown"></div>
+          </div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-hd"><div class="panel-t">Referrers</div></div>
+            <div class="panel-bd" id="referrers"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><div class="panel-t">Devices</div></div>
+            <div class="panel-bd">
+              <div id="deviceChart"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div class="dash-panel" id="panel-settings">
+      <div class="dm-hdr">
+        <div class="dm-h"><small>// workspace</small>Settings</div>
+      </div>
+      <div class="dm-grid">
+        <div>
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-hd"><div class="panel-t">Profile</div><button class="pill" style="padding:5px 12px;font-size:10px" onclick="openModal('editProfileModal')">Edit</button></div>
+            <div class="panel-bd">
+              <div class="cust-row"><span class="cust-row-lbl">Username</span><span style="font-family:var(--mono);font-size:12px" id="settUser">voidpilot</span></div>
+              <div class="cust-row"><span class="cust-row-lbl">Display name</span><span style="font-family:var(--mono);font-size:12px" id="settName">VOIDPILOT</span></div>
+              <div class="cust-row"><span class="cust-row-lbl">Profile URL</span><span style="font-family:var(--mono);font-size:12px;color:var(--c1)" id="settUrl">nexus.gg/voidpilot</span></div>
+              <div class="cust-row"><span class="cust-row-lbl">Email</span><span style="font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.4)" id="settEmail">user@example.com</span></div>
+            </div>
+          </div>
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-hd"><div class="panel-t">Custom Domain</div><span class="premium-star" style="font-size:11px;font-family:var(--mono)">✦ PRO</span></div>
+            <div class="panel-bd" id="domainPanel">
+              <p style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:16px;font-weight:300">Connect your own domain like <span style="color:var(--c1);font-family:var(--mono)">yourname.com</span> to your NEXUS profile.</p>
+              <div class="field"><label>Your domain</label><input class="finput" placeholder="yourname.com" id="customDomainInput"></div>
+              <button class="pill" style="width:100%;padding:11px" onclick="saveDomain()">Connect Domain</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><div class="panel-t">Danger Zone</div></div>
+            <div class="panel-bd" style="display:flex;flex-direction:column;gap:10px">
+              <button class="pill danger" style="width:100%;padding:11px" onclick="toast('Reset customizations — are you sure? (demo)')">Reset Customizations</button>
+              <button class="pill danger" style="width:100%;padding:11px" onclick="logout()">Log Out</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-hd"><div class="panel-t">Plan</div></div>
+            <div class="panel-bd">
+              <div class="kpi" style="margin-bottom:12px"><div class="kpi-lbl">Current plan</div><div class="kpi-val" id="planLabel" style="font-size:22px">FREE</div></div>
+              <button class="pill solid" style="width:100%;padding:12px" onclick="openModal('premModal')">Upgrade to Pro ✦</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><div class="panel-t">Notifications</div></div>
+            <div class="panel-bd">
+              <div class="cust-row"><span class="cust-row-lbl">Email on new follower</span><div class="le-tog on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="cust-row"><span class="cust-row-lbl">Weekly analytics digest</span><div class="le-tog on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="cust-row"><span class="cust-row-lbl">Product updates</span><div class="le-tog" onclick="this.classList.toggle('on')"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODALS
+═══════════════════════════════════════════════════════════ -->
+
+<!-- SIGN UP -->
+<div class="modal-overlay" id="signupModal">
+  <div class="modal" style="max-width:440px">
+    <button class="modal-close" onclick="closeModal('signupModal')">✕</button>
+    <div class="modal-title">Create Account</div>
+    <div class="modal-sub">Join 2.4M creators on NEXUS</div>
+    <div class="auth-tabs">
+      <button class="auth-tab on" onclick="switchAuthTab(this,'signup')">Sign Up</button>
+      <button class="auth-tab" onclick="switchAuthTab(this,'login')">Log In</button>
+    </div>
+    <div id="signupForm">
+      <div class="field"><label>Your handle</label><div style="display:flex;border:1px solid var(--faint)"><span style="padding:12px 10px 12px 14px;font-family:var(--mono);font-size:13px;color:var(--c1)">nexus.gg/</span><input class="finput" id="signupHandle" placeholder="yourname" style="border:none;padding-left:4px" oninput="validateHandle(this)"></div></div>
+      <div class="field"><label>Email</label><input class="finput" id="signupEmail" type="email" placeholder="you@example.com"></div>
+      <div class="field"><label>Password</label><input class="finput" id="signupPass" type="password" placeholder="Min 8 characters"></div>
+      <button class="pill solid" style="width:100%;padding:14px;font-size:12px;margin-bottom:16px" onclick="doSignup()">Create Account</button>
+      <div class="divider">or</div>
+      <div class="social-auth">
+        <button class="sauth-btn" onclick="socialSignup('Google')">G &nbsp;Google</button>
+        <button class="sauth-btn" onclick="socialSignup('Twitter')">𝕏 &nbsp;Twitter</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal" style="max-width:440px">
+    <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
+    <div class="modal-title">Welcome Back</div>
+    <div class="modal-sub">Log in to your NEXUS account</div>
+    <div class="field"><label>Email</label><input class="finput" id="loginEmail" type="email" placeholder="you@example.com"></div>
+    <div class="field"><label>Password</label><input class="finput" id="loginPass" type="password" placeholder="Your password"></div>
+    <button class="pill solid" style="width:100%;padding:14px;font-size:12px;margin-bottom:16px" onclick="doLogin()">Log In</button>
+    <div class="divider">or</div>
+    <div class="social-auth">
+      <button class="sauth-btn" onclick="socialSignup('Google')">G &nbsp;Google</button>
+      <button class="sauth-btn" onclick="socialSignup('Twitter')">𝕏 &nbsp;Twitter</button>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.3)">Forgot password? <a href="#" onclick="toast('Reset email sent!')" style="color:var(--c1)">Reset it</a></div>
+  </div>
+</div>
+
+<!-- ADD / EDIT LINK -->
+<div class="modal-overlay" id="addLinkModal">
+  <div class="modal" style="max-width:480px">
+    <button class="modal-close" onclick="closeModal('addLinkModal')">✕</button>
+    <div class="modal-title" id="addLinkTitle">Add Link</div>
+    <div class="modal-sub">Add a new link to your profile</div>
+    <input type="hidden" id="editLinkIdx" value="-1">
+    <div class="field"><label>Title</label><input class="finput" id="linkTitle" placeholder="e.g. My YouTube Channel"></div>
+    <div class="field"><label>URL</label><input class="finput" id="linkUrl" placeholder="https://youtube.com/@you"></div>
+    <div class="field"><label>Icon</label>
+      <div class="icon-picker" id="iconPicker"></div>
+    </div>
+    <div class="field"><label>Accent Color</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="linkColorPicker"></div>
+    </div>
+    <button class="pill solid" style="width:100%;padding:14px;margin-top:8px" onclick="saveLink()">Save Link</button>
+  </div>
+</div>
+
+<!-- EDIT PROFILE -->
+<div class="modal-overlay" id="editProfileModal">
+  <div class="modal" style="max-width:480px">
+    <button class="modal-close" onclick="closeModal('editProfileModal')">✕</button>
+    <div class="modal-title">Edit Profile</div>
+    <div class="modal-sub">Customize how you appear</div>
+    <div class="field" style="display:flex;gap:16px;align-items:center">
+      <div class="avatar-upload" id="avatarUploadEl" onclick="document.getElementById('avatarFileInput').click()" title="Click to upload">
+        <div id="avatarPreview" style="font-size:32px">👾</div>
+        <input type="file" id="avatarFileInput" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+      </div>
+      <div style="flex:1">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.3);margin-bottom:8px">AVATAR</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.3);font-weight:300">Click to upload image, or pick an emoji below</div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap" id="emojiPicker"></div>
+      </div>
+    </div>
+    <div class="field"><label>Display Name</label><input class="finput" id="editName" placeholder="YOUR NAME" value="VOIDPILOT"></div>
+    <div class="field"><label>Username</label><div style="display:flex;border:1px solid var(--faint)"><span style="padding:12px 10px 12px 14px;font-family:var(--mono);font-size:13px;color:var(--c1)">nexus.gg/</span><input class="finput" id="editUsername" placeholder="yourname" style="border:none;padding-left:4px" value="voidpilot"></div></div>
+    <div class="field"><label>Bio</label><textarea class="finput" id="editBio" placeholder="Tell the world who you are...">Digital architect. Pushing pixels into the void since 2019. Music / code / chaos.</textarea></div>
+    <div class="field"><label>Tags (comma separated)</label><input class="finput" id="editTags" placeholder="Pro, Creator, Music" value="Pro, Verified, Creator"></div>
+    <div class="field"><label>Social Links</label>
+      <div style="display:flex;flex-direction:column;gap:6px" id="socialInputs"></div>
+    </div>
+    <button class="pill solid" style="width:100%;padding:14px;margin-top:8px" onclick="saveProfile()">Save Profile</button>
+  </div>
+</div>
+
+<!-- PREMIUM MODAL -->
+<div class="modal-overlay prem-modal" id="premModal">
+  <div class="modal" style="max-width:560px">
+    <div class="prem-glow"></div>
+    <button class="modal-close" onclick="closeModal('premModal')">✕</button>
+    <div class="prem-header">
+      <div class="prem-badge">✦ NEXUS PRO</div>
+      <div class="prem-price">$9<span>.99/mo</span></div>
+      <div class="prem-period">Billed monthly — cancel anytime</div>
+    </div>
+    <div class="prem-perks">
+      <div class="perk"><div class="perk-ico">🎨</div><div class="perk-name">40+ Premium Themes</div><div class="perk-desc">Every theme unlocked, including exclusive Pro-only designs.</div></div>
+      <div class="perk"><div class="perk-ico">🌐</div><div class="perk-name">Custom Domain</div><div class="perk-desc">Connect yourname.com to your profile for free.</div></div>
+      <div class="perk"><div class="perk-ico">✨</div><div class="perk-name">Animated Backgrounds</div><div class="perk-desc">Particles, mesh gradients, glitch effects, and more.</div></div>
+      <div class="perk"><div class="perk-ico">🖱️</div><div class="perk-name">Custom Cursors</div><div class="perk-desc">12 unique cursor styles to match your aesthetic.</div></div>
+      <div class="perk"><div class="perk-ico">📊</div><div class="perk-name">Unlimited Analytics</div><div class="perk-desc">Full history, geo maps, device breakdown, referrers.</div></div>
+      <div class="perk"><div class="perk-ico">🔇</div><div class="perk-name">Remove Branding</div><div class="perk-desc">Hide "Powered by NEXUS" from your profile page.</div></div>
+      <div class="perk"><div class="perk-ico">🔤</div><div class="perk-name">Custom Fonts</div><div class="perk-desc">20+ font options to perfectly match your vibe.</div></div>
+      <div class="perk"><div class="perk-ico">⚡</div><div class="perk-name">Priority Support</div><div class="perk-desc">Skip the queue. Get help within 2 hours, guaranteed.</div></div>
+    </div>
+    <button class="prem-cta" onclick="doPremiumUpgrade()">Upgrade Now — $9.99/mo</button>
+    <div class="prem-fine">No contracts. Cancel anytime. Secure payment via Stripe.</div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="modal-overlay" id="payModal">
+  <div class="modal" style="max-width:440px">
+    <button class="modal-close" onclick="closeModal('payModal')">✕</button>
+    <div class="modal-title">Complete Upgrade</div>
+    <div class="modal-sub" style="margin-bottom:20px">NEXUS Pro — $9.99/month</div>
+    <div style="background:rgba(232,255,71,.06);border:1px solid rgba(232,255,71,.15);padding:14px;margin-bottom:24px;font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.5)">✦ Upgrading to NEXUS Pro unlocks all premium features immediately after payment.</div>
+    <div class="field"><label>Card Number</label><input class="finput" id="cardNum" placeholder="4242 4242 4242 4242" maxlength="19" oninput="formatCard(this)"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label>Expiry</label><input class="finput" id="cardExp" placeholder="MM / YY" maxlength="7" oninput="formatExp(this)"></div>
+      <div class="field"><label>CVC</label><input class="finput" id="cardCvc" placeholder="123" maxlength="3"></div>
+    </div>
+    <div class="field"><label>Name on card</label><input class="finput" id="cardName" placeholder="Full Name"></div>
+    <button class="pill solid" style="width:100%;padding:14px;font-size:12px;margin-top:8px" onclick="processPayment()">Pay $9.99 →</button>
+    <div style="text-align:center;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.2);margin-top:12px;letter-spacing:1px">🔒 Secured by Stripe</div>
+  </div>
+</div>
+
+<!-- PAYMENT SUCCESS -->
+<div class="modal-overlay" id="successModal">
+  <div class="modal" style="max-width:400px;text-align:center">
+    <div style="font-size:56px;margin-bottom:20px">🎉</div>
+    <div class="modal-title">You're Pro!</div>
+    <div style="font-size:14px;color:rgba(255,255,255,.4);margin-bottom:28px;font-weight:300;line-height:1.8">Welcome to NEXUS Pro. All premium features are now unlocked. Go make something wild.</div>
+    <button class="pill solid" style="width:100%;padding:14px" onclick="closeModal('successModal');switchTab('customize')">Explore Pro Features ✦</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════ */
+let state = {
+  loggedIn: false,
+  isPro: false,
+  user: { name:'VOIDPILOT', username:'voidpilot', email:'', bio:'Digital architect. Pushing pixels into the void since 2019. Music / code / chaos.', tags:['Pro','Verified','Creator'], avatar:'👾', socials:{x:'',ig:'',yt:'',gh:'',tw:''} },
+  links: [
+    {id:1, title:'Latest Track — NEON GHOST', url:'https://soundcloud.com/voidpilot', icon:'♫', color:'#e8ff47', on:true, clicks:3241},
+    {id:2, title:'Merch Drop — Limited Edition', url:'https://voidpilot.shop', icon:'▣', color:'#ff2d6b', on:true, clicks:1823},
+    {id:3, title:'YouTube — Behind the Build', url:'https://youtube.com/@voidpilot', icon:'▶', color:'#00e5ff', on:true, clicks:1402},
+    {id:4, title:'Discord — Join the Server', url:'https://discord.gg/voidpilot', icon:'#', color:'#b44dff', on:false, clicks:891},
+    {id:5, title:'Patreon — Exclusive Access', url:'https://patreon.com/voidpilot', icon:'$', color:'#00ff88', on:true, clicks:654},
+  ],
+  customize: { theme:'cyber', accent:'#e8ff47', bg:'#04050d', cardRadius:'0px', cursor:'default', bgfx:'none', font:'Syne' },
+  nextId: 6, dashInited: false, partInited: false, bgfxInited: false,
+};
+
+const ICONS = ['♫','▣','▶','#','$','★','✦','♥','▲','◎','⊞','⌘','✉','📍','🔗','🎵','🛒','📺','💬','🎮','📸','💡','🔒','🌐'];
+const LINK_COLORS = ['#e8ff47','#ff2d6b','#00e5ff','#b44dff','#00ff88','#ff8c00','#ff00c8','#ffffff'];
+const EMOJIS = ['👾','🔥','⚡','🌸','👻','🌙','🦋','🎭','💎','🌊','🎯','🚀','🎪','🌺'];
+const SOCIALS = [{key:'x',label:'X (Twitter)',icon:'𝕏'},{key:'ig',label:'Instagram',icon:'ig'},{key:'yt',label:'YouTube',icon:'yt'},{key:'gh',label:'GitHub',icon:'gh'},{key:'tw',label:'Twitch',icon:'tw'}];
+const THEMES = [
+  {id:'cyber',label:'Cyber',a:'#04050d',b:'#e8ff47'},{id:'neon',label:'Neon',a:'#0d0020',b:'#bf00ff'},{id:'acid',label:'Acid',a:'#001400',b:'#00ff44'},
+  {id:'inferno',label:'Inferno',a:'#1a0000',b:'#ff4400'},{id:'ice',label:'Ice',a:'#00090e',b:'#00c8ff'},{id:'ghost',label:'Ghost',a:'#0a0a0a',b:'#dddddd'},
+  {id:'gold',label:'Gold',a:'#0d0a00',b:'#ffd700'},{id:'cherry',label:'Cherry',a:'#0d000a',b:'#ff2d6b'},{id:'void',label:'Void',a:'#000000',b:'#ffffff'},
+];
+const CURSORS = [{id:'default',label:'Default',icon:'○'},{id:'cur-crosshair',label:'Cross',icon:'+'},{id:'cur-dot',label:'Dot',icon:'·'},{id:'cur-star',label:'Star',icon:'★'}];
+const BGFXS = [{id:'none',label:'None',icon:'□'},{id:'particles',label:'Particles',icon:'✦'},{id:'mesh',label:'Mesh',icon:'◈'},{id:'glitch',label:'Glitch',icon:'▒'}];
+const FONTS = ['Syne','Share Tech Mono','Georgia','Courier New','Impact','Times New Roman'];
+
+/* ═══════════════════════════════════════════════════════════
+   ROUTER
+═══════════════════════════════════════════════════════════ */
+function show(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id === 'profile') initProfile();
+  if(id === 'dashboard') initDash();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CURSOR
+═══════════════════════════════════════════════════════════ */
+const curEl = document.getElementById('cur'), cur2El = document.getElementById('cur2');
+let mx=0,my=0,tx=0,ty=0;
+document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; curEl.style.left=mx+'px'; curEl.style.top=my+'px'; });
+(function loop(){ tx+=(mx-tx)*.12; ty+=(my-ty)*.12; cur2El.style.left=tx+'px'; cur2El.style.top=ty+'px'; requestAnimationFrame(loop); })();
+document.addEventListener('mouseover', e => { if(e.target.matches('button,a,input,select,.le-tog,.cust-opt,.sw,.mq-card,.fc-lnk,.pc-lnk,.pc-soc,.dsb-item')) document.body.classList.add('hov'); });
+document.addEventListener('mouseout', e => { if(e.target.matches('button,a,input,select,.le-tog,.cust-opt,.sw,.mq-card,.fc-lnk,.pc-lnk,.pc-soc,.dsb-item')) document.body.classList.remove('hov'); });
+
+/* ═══════════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════════ */
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2800);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODALS
+═══════════════════════════════════════════════════════════ */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
+
+/* ═══════════════════════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════════════════════ */
+function switchAuthTab(btn, form) {
+  btn.closest('.modal').querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('on'));
+  btn.classList.add('on');
+  if(form==='login') { closeModal('signupModal'); openModal('loginModal'); }
+  else { closeModal('loginModal'); openModal('signupModal'); }
+}
+
+function validateHandle(inp) {
+  inp.value = inp.value.toLowerCase().replace(/[^a-z0-9_]/g,'');
+}
+
+function doSignup() {
+  const h = document.getElementById('signupHandle').value.trim();
+  const e = document.getElementById('signupEmail').value.trim();
+  const p = document.getElementById('signupPass').value;
+  if(!h) { toast('Choose a handle first'); return; }
+  if(!e || !e.includes('@')) { toast('Enter a valid email'); return; }
+  if(p.length < 8) { toast('Password must be 8+ characters'); return; }
+  state.loggedIn = true;
+  state.user.username = h;
+  state.user.email = e;
+  state.user.name = h.toUpperCase();
+  closeModal('signupModal');
+  updateNavState();
+  toast('Welcome to NEXUS, ' + h + '!');
+  show('dashboard');
+}
+
+function doLogin() {
+  const e = document.getElementById('loginEmail').value.trim();
+  const p = document.getElementById('loginPass').value;
+  if(!e || !p) { toast('Fill in both fields'); return; }
+  state.loggedIn = true;
+  state.user.email = e;
+  closeModal('loginModal');
+  updateNavState();
+  toast('Welcome back!');
+  show('dashboard');
+}
+
+function socialSignup(provider) {
+  state.loggedIn = true;
+  closeModal('signupModal'); closeModal('loginModal');
+  updateNavState();
+  toast('Signed in with ' + provider + '!');
+  show('dashboard');
+}
+
+function logout() {
+  state.loggedIn = false;
+  state.isPro = false;
+  updateNavState();
+  toast('Logged out');
+  show('landing');
+}
+
+function updateNavState() {
+  const li = state.loggedIn;
+  document.getElementById('loginBtn').style.display = li ? 'none':'';
+  document.getElementById('signupBtn').style.display = li ? 'none':'';
+  document.getElementById('dashBtn').style.display = li ? '':'none';
+  document.getElementById('logoutBtn').style.display = li ? '':'none';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PREMIUM
+═══════════════════════════════════════════════════════════ */
+function doPremiumUpgrade() {
+  closeModal('premModal');
+  openModal('payModal');
+}
+
+function formatCard(inp) {
+  let v = inp.value.replace(/\D/g,'').slice(0,16);
+  inp.value = v.replace(/(.{4})/g,'$1 ').trim();
+}
+function formatExp(inp) {
+  let v = inp.value.replace(/\D/g,'').slice(0,4);
+  if(v.length>2) v = v.slice(0,2)+' / '+v.slice(2);
+  inp.value = v;
+}
+
+function processPayment() {
+  const num = document.getElementById('cardNum').value.replace(/\s/g,'');
+  const exp = document.getElementById('cardExp').value;
+  const cvc = document.getElementById('cardCvc').value;
+  const name = document.getElementById('cardName').value.trim();
+  if(num.length<16) { toast('Enter a valid card number'); return; }
+  if(!exp.includes('/')) { toast('Enter expiry date'); return; }
+  if(cvc.length<3) { toast('Enter CVC'); return; }
+  if(!name) { toast('Enter name on card'); return; }
+  // Simulate payment
+  closeModal('payModal');
+  state.isPro = true;
+  state.loggedIn = true;
+  updateNavState();
+  openModal('successModal');
+  // Update UI
+  document.getElementById('dsb-plan-badge').textContent = 'PRO ✦';
+  document.getElementById('planLabel').textContent = 'PRO ✦';
+  document.getElementById('dsbUpgrade').style.display = 'none';
+  document.querySelectorAll('.prem-lock-overlay').forEach(el => el.remove());
+  renderCustPanels();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TERMINAL TYPEWRITER
+═══════════════════════════════════════════════════════════ */
+const seqs = [
+  {cmd:'nexus claim voidpilot', o1:'✓ Handle available', o2:'→ nexus.gg/voidpilot is yours'},
+  {cmd:'nexus theme set cyberpunk', o1:'✓ Theme applied (0.3s)', o2:'→ 40+ themes available on Pro'},
+  {cmd:'nexus analytics --today', o1:'✓ 847 views · 312 clicks', o2:'→ CTR 36.8% — above average'},
+];
+let si=0,ci=0,ph=0;
+const tCmdEl=document.getElementById('tCmd'),tOut1El=document.getElementById('tOut1'),tOut2El=document.getElementById('tOut2'),tCurEl=document.getElementById('tCur');
+function typeLoop() {
+  const s=seqs[si];
+  if(ph===0){ if(ci<=s.cmd.length){tCmdEl.textContent=s.cmd.slice(0,ci++);setTimeout(typeLoop,52);}else{ph=1;setTimeout(typeLoop,350);} }
+  else if(ph===1){ tOut1El.textContent=s.o1;tOut2El.textContent=s.o2;tCurEl.style.display='none';ph=2;setTimeout(typeLoop,2600); }
+  else{ tCmdEl.textContent='';tOut1El.textContent='';tOut2El.textContent='';tCurEl.style.display='';ph=0;ci=0;si=(si+1)%seqs.length;setTimeout(typeLoop,300); }
+}
+typeLoop();
+
+/* ═══════════════════════════════════════════════════════════
+   TICKER + MARQUEE
+═══════════════════════════════════════════════════════════ */
+const tickItems = ['Unlimited Links','Custom Domain','40+ Themes','Real-time Analytics','Edge Deployed','Free to Start','Remove Branding','Custom Cursors'];
+const tEl = document.getElementById('tick');
+if(tEl){ const inner = tickItems.map(t=>`<span class="ti"><span>✦</span>${t}</span>`).join(''); tEl.innerHTML=inner+inner; }
+
+const profData = [
+  {n:'NEON_WRAITH',h:'@neonwraith',e:'🌸',c:'#ff2d6b'},{n:'GHOSTBYTE',h:'@ghostbyte',e:'👻',c:'#b44dff'},
+  {n:'ACID_FLUX',h:'@acidflux',e:'⚡',c:'#e8ff47'},{n:'CRYOGEN',h:'@cryogen',e:'🧊',c:'#00e5ff'},
+  {n:'STATIC.V',h:'@staticv',e:'📡',c:'#ff8c00'},{n:'VRTX',h:'@vrtx',e:'🌀',c:'#00ff88'},
+  {n:'NULL_PTR',h:'@nullptr',e:'🖤',c:'#888'},{n:'MIRRORWEB',h:'@mirrorweb',e:'🪞',c:'#e8ff47'},
+  {n:'DEEPBURN',h:'@deepburn',e:'🔥',c:'#ff2d6b'},{n:'HOLOWREN',h:'@holowren',e:'✨',c:'#b44dff'},
+];
+function mkCard(p){return `<div class="mq-card" onclick="toast('View ${p.h} on NEXUS')"><div class="mq-av" style="background:linear-gradient(135deg,${p.c}33,${p.c}11);border:1px solid ${p.c}44">${p.e}</div><div><div class="mq-n">${p.n}</div><div class="mq-h">${p.h} · nexus.gg</div></div></div>`;}
+[['m1',profData.slice(0,5)],['m2',profData.slice(5,10)]].forEach(([id,half])=>{
+  const el=document.getElementById(id); if(!el)return;
+  const all=[...half,...half,...half,...half];
+  el.innerHTML=`<div class="mq-inner">${all.map(mkCard).join('')}</div>`;
+});
+
+/* ═══════════════════════════════════════════════════════════
+   CLAIM HANDLE
+═══════════════════════════════════════════════════════════ */
+function claimHandle() {
+  const v = document.getElementById('claimInp').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  if(!v) { toast('Enter a handle first'); return; }
+  document.getElementById('signupHandle').value = v;
+  openModal('signupModal');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PROFILE PAGE
+═══════════════════════════════════════════════════════════ */
+function initProfile() {
+  renderProfileLinks();
+  renderProfileSocials();
+  updateProfileAppearance();
+  if(!state.partInited) { state.partInited=true; startParticles(); }
+  document.getElementById('pc-foot') && (document.getElementById('pc-foot').style.display = state.isPro ? 'none':'block');
+}
+
+function renderProfileLinks() {
+  const u = state.user;
+  document.getElementById('pcName').textContent = u.name;
+  document.getElementById('pcHandle').textContent = `nexus.gg/${u.username}`;
+  document.getElementById('pcBio').textContent = u.bio;
+  document.getElementById('pcAvEl').innerHTML = u.avatar.startsWith('data:') ? `<img src="${u.avatar}">` : u.avatar;
+  const tagsEl = document.getElementById('pcTags');
+  tagsEl.innerHTML = u.tags.map(t=>`<span class="pc-tag">${t}</span>`).join('');
+  const linksEl = document.getElementById('pcLinks');
+  linksEl.innerHTML = state.links.filter(l=>l.on).map((l,i)=>`
+    <a class="pc-lnk" href="${l.url}" target="_blank" rel="noopener" data-c="${l.color}" style="--lc:${l.color}" onclick="trackClick(${l.id},event)">
+      <div class="pc-lnk-glow" style="background:radial-gradient(circle at left,${l.color}18,transparent 60%)"></div>
+      <div class="pc-lnk-ico" style="color:${l.color};box-shadow:none" id="lico${i}">${l.icon}</div>
+      <div class="pc-lnk-txt"><div class="pc-lnk-title">${l.title}</div><div class="pc-lnk-sub">${l.url.replace(/^https?:\/\//,'')}</div></div>
+      <div class="pc-lnk-arr" style="color:${l.color}55">→</div>
+    </a>
+  `).join('');
+  // hover glow
+  linksEl.querySelectorAll('.pc-lnk').forEach((el,i)=>{
+    el.addEventListener('mouseenter',()=>{ el.querySelector('.pc-lnk-ico').style.boxShadow=`0 0 12px ${state.links.filter(l=>l.on)[i]?.color||'#fff'},0 0 0 1px rgba(255,255,255,.06)`; });
+    el.addEventListener('mouseleave',()=>{ el.querySelector('.pc-lnk-ico').style.boxShadow='none'; });
+  });
+}
+
+function renderProfileSocials() {
+  const el = document.getElementById('pcSocials');
+  el.innerHTML = SOCIALS.map(s=>`<div class="pc-soc" onclick="toast('${s.label} link coming soon')">${s.icon}</div>`).join('');
+}
+
+function trackClick(id, e) {
+  const link = state.links.find(l=>l.id===id);
+  if(link) { link.clicks++; }
+  // allow href to open
+}
+
+function updateProfileAppearance() {
+  const c = state.customize;
+  document.getElementById('profileCard').style.background = c.bg;
+  document.documentElement.style.setProperty('--acc', c.accent);
+  document.documentElement.style.setProperty('--profile-bg', c.bg);
+  document.documentElement.style.setProperty('--card-radius', c.cardRadius);
+  // cursor
+  const curClasses = ['cur-crosshair','cur-dot','cur-star'];
+  curClasses.forEach(cls => document.body.classList.remove(cls));
+  if(c.cursor !== 'default') document.body.classList.add(c.cursor);
+  // bgfx
+  runBgfx(c.bgfx);
+}
+
+function startParticles() {
+  const canvas = document.getElementById('particles');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W=canvas.width=window.innerWidth, H=canvas.height=window.innerHeight;
+  window.addEventListener('resize',()=>{ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; });
+  const pts = Array.from({length:70},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.2+.4,hue:[54,340,195,280][Math.floor(Math.random()*4)],a:Math.random()*.4+.1}));
+  (function frame(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0||p.x>W)p.vx*=-1; if(p.y<0||p.y>H)p.vy*=-1;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`hsla(${p.hue},100%,70%,${p.a})`; ctx.fill();
+    });
+    for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y, d=Math.sqrt(dx*dx+dy*dy);
+      if(d<110){ ctx.beginPath(); ctx.moveTo(pts[i].x,pts[i].y); ctx.lineTo(pts[j].x,pts[j].y);
+        ctx.strokeStyle=`rgba(232,255,71,${(1-d/110)*.06})`; ctx.lineWidth=.5; ctx.stroke(); }
+    }
+    requestAnimationFrame(frame);
+  })();
+}
+
+/* Background FX canvas */
+let bgfxAnimId;
+function runBgfx(type) {
+  const canvas = document.getElementById('bgfxCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  cancelAnimationFrame(bgfxAnimId);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!state.isPro || type==='none') { document.getElementById('bgfx').style.opacity=0; return; }
+  document.getElementById('bgfx').style.opacity=1;
+  let W=canvas.width=window.innerWidth, H=canvas.height=window.innerHeight;
+  window.addEventListener('resize',()=>{W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;});
+  if(type==='particles') {
+    const pts=Array.from({length:50},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,r:Math.random()*2+.5}));
+    (function frame(){bgfxAnimId=requestAnimationFrame(frame);ctx.clearRect(0,0,W,H);pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(232,255,71,.12)`;ctx.fill();});})();
+  } else if(type==='mesh') {
+    let t=0; (function frame(){bgfxAnimId=requestAnimationFrame(frame);t+=.008;ctx.clearRect(0,0,W,H);const grd=ctx.createRadialGradient(W/2+Math.sin(t)*200,H/2+Math.cos(t*.7)*150,0,W/2,H/2,Math.max(W,H)*.8);grd.addColorStop(0,'rgba(232,255,71,.07)');grd.addColorStop(.5,'rgba(180,77,255,.04)');grd.addColorStop(1,'rgba(0,229,255,.02)');ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);})();
+  } else if(type==='glitch') {
+    let t=0; (function frame(){bgfxAnimId=requestAnimationFrame(frame);t++;ctx.clearRect(0,0,W,H);if(t%30<3){for(let i=0;i<6;i++){const y=Math.random()*H,h=Math.random()*8+2;ctx.fillStyle=`rgba(232,255,71,${Math.random()*.08})`;ctx.fillRect(0,y,W,h);}}})();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════════════════════ */
+function initDash() {
+  if(state.dashInited) { renderLinkList(); renderPhonePreview(); return; }
+  state.dashInited = true;
+  if(!state.loggedIn) { state.loggedIn=true; updateNavState(); }
+  // date
+  document.getElementById('dashDate').textContent = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}).toUpperCase();
+  // KPI counters
+  document.querySelectorAll('.kpi-val[data-target]').forEach(el=>{
+    const target=+el.dataset.target, fmt=el.dataset.fmt;
+    let v=0; const step=target/55;
+    const t=setInterval(()=>{ v=Math.min(v+step,target); el.textContent=fmt==='pct'?(v/10).toFixed(1)+'%':Math.round(v).toLocaleString(); if(v>=target)clearInterval(t); },16);
+  });
+  // spark chart
+  buildSpark('sparkChart',[320,480,390,560,620,500,740,870,660,950,800,890,960,1080]);
+  buildSpark('sparkLong',[280,310,290,400,380,500,470,540,490,560,520,600,580,650,610,700,680,750,720,780,760,820,800,870,840,900,880,950,960,1080]);
+  // top links
+  const tl = document.getElementById('topLinks');
+  if(tl) tl.innerHTML = [...state.links].sort((a,b)=>b.clicks-a.clicks).slice(0,4).map(l=>`
+    <div class="le-item">
+      <div class="le-dot" style="background:${l.color};box-shadow:0 0 5px ${l.color}66"></div>
+      <div class="le-inf"><div class="le-n">${l.title}</div><div class="le-u">${l.url.replace(/^https?:\/\//,'')}</div></div>
+      <div class="le-clk">${l.clicks.toLocaleString()}</div>
+    </div>`).join('');
+  // referrers
+  const refEl = document.getElementById('referrers');
+  if(refEl) {
+    const refs=[{s:'Instagram',n:'4,821',p:44},{s:'Twitter/X',n:'2,310',p:21},{s:'TikTok',n:'1,890',p:17},{s:'Direct',n:'980',p:9},{s:'Other',n:'1,010',p:9}];
+    refEl.innerHTML = refs.map(r=>`
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.5);margin-bottom:5px"><span>${r.s}</span><span>${r.n}</span></div>
+        <div style="height:3px;background:rgba(255,255,255,.06);border-radius:1px"><div style="height:100%;width:${r.p}%;background:var(--c1);box-shadow:0 0 6px var(--c1);border-radius:1px"></div></div>
+      </div>`).join('');
+  }
+  // devices
+  const devEl = document.getElementById('deviceChart');
+  if(devEl) {
+    const devs=[{label:'Mobile',pct:68,color:state.customize.accent},{label:'Desktop',pct:28,color:'#00e5ff'},{label:'Tablet',pct:4,color:'#b44dff'}];
+    devEl.innerHTML = devs.map(d=>`
+      <div class="cust-row"><span class="cust-row-lbl">${d.label}</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:100px;height:3px;background:rgba(255,255,255,.06)"><div style="height:100%;width:${d.pct}%;background:${d.color};box-shadow:0 0 6px ${d.color}"></div></div>
+          <span style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.4)">${d.pct}%</span>
+        </div>
+      </div>`).join('');
+  }
+  // link breakdown
+  const lbEl = document.getElementById('linkBreakdown');
+  if(lbEl) lbEl.innerHTML = state.links.map(l=>`
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.45);margin-bottom:5px"><span>${l.icon} ${l.title.slice(0,28)}${l.title.length>28?'…':''}</span><span>${l.clicks.toLocaleString()}</span></div>
+      <div style="height:3px;background:rgba(255,255,255,.06)"><div style="height:100%;width:${Math.round(l.clicks/state.links.reduce((a,b)=>a+b.clicks,0)*100)}%;background:${l.color};box-shadow:0 0 6px ${l.color}55"></div></div>
+    </div>`).join('');
+  // sidebar settings
+  document.getElementById('settUser').textContent = state.user.username;
+  document.getElementById('settName').textContent = state.user.name;
+  document.getElementById('settUrl').textContent = `nexus.gg/${state.user.username}`;
+  document.getElementById('settEmail').textContent = state.user.email || 'user@example.com';
+  // render
+  renderLinkList();
+  renderPhonePreview();
+  renderCustPanels();
+  initSocialInputs();
+  initEmojiPicker();
+  initIconPicker();
+  initLinkColorPicker();
+}
+
+function buildSpark(id, data) {
+  const el = document.getElementById(id); if(!el) return;
+  const max = Math.max(...data);
+  el.innerHTML = data.map((v,i)=>`<div class="spark-b${i===data.length-1?' peak':''}" style="height:${(v/max*100)}%" data-v="${v.toLocaleString()}"></div>`).join('');
+}
+
+function switchTab(id) {
+  document.querySelectorAll('.dsb-item').forEach(el => el.classList.remove('on'));
+  document.querySelectorAll('.dash-panel').forEach(p => p.classList.remove('on'));
+  const tab = document.getElementById('tab-'+id);
+  const panel = document.getElementById('panel-'+id);
+  if(tab) tab.classList.add('on');
+  if(panel) panel.classList.add('on');
+  if(id==='links') renderLinkList();
+  if(id==='customize') renderCustPanels();
+  if(id==='analytics') buildSpark('sparkLong',[280,310,290,400,380,500,470,540,490,560,520,600,580,650,610,700,680,750,720,780,760,820,800,870,840,900,880,950,960,1080]);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LINKS
+═══════════════════════════════════════════════════════════ */
+function renderLinkList() {
+  const el = document.getElementById('leList'); if(!el) return;
+  document.getElementById('linkCountLabel').textContent = `${state.links.length} links`;
+  el.innerHTML = state.links.map((l,i)=>`
+    <div class="le-item">
+      <div class="le-drag">⠿</div>
+      <div class="le-dot" style="background:${l.color};box-shadow:0 0 5px ${l.color}66"></div>
+      <div class="le-inf">
+        <div class="le-n">${l.icon} ${l.title}</div>
+        <div class="le-u">${l.url.replace(/^https?:\/\//,'')}</div>
+      </div>
+      <div class="le-clk">${l.clicks.toLocaleString()}</div>
+      <div class="le-tog${l.on?' on':''}" onclick="toggleLink(${i})"></div>
+      <button class="le-edit" onclick="openEditLink(${i})">✏</button>
+      <button class="le-del" onclick="deleteLink(${i})">✕</button>
+    </div>`).join('');
+  renderPhonePreview();
+  renderProfileLinks();
+}
+
+function toggleLink(i) {
+  state.links[i].on = !state.links[i].on;
+  renderLinkList();
+  toast(state.links[i].on ? 'Link enabled' : 'Link hidden');
+}
+
+function deleteLink(i) {
+  state.links.splice(i,1);
+  renderLinkList();
+  toast('Link deleted');
+}
+
+function openAddLink() {
+  document.getElementById('addLinkTitle').textContent = 'Add Link';
+  document.getElementById('editLinkIdx').value = '-1';
+  document.getElementById('linkTitle').value = '';
+  document.getElementById('linkUrl').value = '';
+  selectIcon('♫');
+  selectLinkColor('#e8ff47');
+  switchTab('links');
+  openModal('addLinkModal');
+}
+
+function openEditLink(i) {
+  const l = state.links[i];
+  document.getElementById('addLinkTitle').textContent = 'Edit Link';
+  document.getElementById('editLinkIdx').value = i;
+  document.getElementById('linkTitle').value = l.title;
+  document.getElementById('linkUrl').value = l.url;
+  selectIcon(l.icon);
+  selectLinkColor(l.color);
+  openModal('addLinkModal');
+}
+
+function saveLink() {
+  const title = document.getElementById('linkTitle').value.trim();
+  const url = document.getElementById('linkUrl').value.trim();
+  if(!title) { toast('Enter a link title'); return; }
+  if(!url) { toast('Enter a URL'); return; }
+  const validUrl = url.startsWith('http') ? url : 'https://'+url;
+  const icon = document.querySelector('.icon-opt.on')?.textContent || '🔗';
+  const color = document.querySelector('#linkColorPicker .on')?.dataset.color || '#e8ff47';
+  const idx = +document.getElementById('editLinkIdx').value;
+  if(idx === -1) {
+    state.links.push({id:state.nextId++, title, url:validUrl, icon, color, on:true, clicks:0});
+    toast('Link added!');
+  } else {
+    state.links[idx] = {...state.links[idx], title, url:validUrl, icon, color};
+    toast('Link updated!');
+  }
+  closeModal('addLinkModal');
+  renderLinkList();
+}
+
+function initIconPicker() {
+  const el = document.getElementById('iconPicker'); if(!el) return;
+  el.innerHTML = ICONS.map(ic=>`<div class="icon-opt" onclick="selectIcon('${ic}')">${ic}</div>`).join('');
+}
+
+function selectIcon(ic) {
+  document.querySelectorAll('.icon-opt').forEach(el=>el.classList.remove('on'));
+  document.querySelectorAll('.icon-opt').forEach(el=>{ if(el.textContent===ic) el.classList.add('on'); });
+}
+
+function initLinkColorPicker() {
+  const el = document.getElementById('linkColorPicker'); if(!el) return;
+  el.innerHTML = LINK_COLORS.map(c=>`<div class="sw" style="background:${c};width:32px;height:32px" data-color="${c}" onclick="selectLinkColor('${c}')"></div>`).join('');
+}
+
+function selectLinkColor(c) {
+  document.querySelectorAll('#linkColorPicker .sw').forEach(el=>el.classList.remove('on'));
+  document.querySelectorAll('#linkColorPicker .sw').forEach(el=>{ if(el.dataset.color===c) el.classList.add('on'); });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PHONE PREVIEW
+═══════════════════════════════════════════════════════════ */
+function renderPhonePreview() {
+  ['phonePreview','custPhonePreview'].forEach(id=>{
+    const el = document.getElementById(id); if(!el) return;
+    const av = state.user.avatar;
+    const avHtml = av.startsWith('data:') ? `<img src="${av}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">` : av;
+    el.innerHTML = `
+      <div class="ph-av">${avHtml}</div>
+      <div class="ph-name">${state.user.name}</div>
+      <div class="ph-hdl">@${state.user.username}</div>
+      ${state.links.filter(l=>l.on).slice(0,4).map(l=>`<div class="ph-lnk">${l.icon} ${l.title.slice(0,18)}</div>`).join('')}
+    `;
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CUSTOMIZE
+═══════════════════════════════════════════════════════════ */
+function renderCustPanels() {
+  // Themes
+  const sw = document.getElementById('themeSwatches'); if(sw){
+    sw.innerHTML = THEMES.map(t=>`
+      <div class="sw${state.customize.theme===t.id?' on':''}" style="background:linear-gradient(135deg,${t.a},${t.b}55)" onclick="selectTheme('${t.id}')" title="${t.label}">
+        <div class="sw-lbl">${t.label}</div>
+      </div>`).join('');
+  }
+  // Cursors
+  const cg = document.getElementById('cursorGrid'); if(cg){
+    cg.innerHTML = CURSORS.map(c=>`
+      <div class="cust-opt${state.customize.cursor===c.id?' on':''}" onclick="${state.isPro||c.id==='default'?`selectCursor('${c.id}')`:`openModal('premModal')`}">
+        <div class="cust-opt-ico" style="font-family:monospace;font-size:20px">${c.icon}</div>
+        <div class="cust-opt-lbl">${c.label}${c.id!=='default'&&!state.isPro?' ✦':''}</div>
+      </div>`).join('');
+  }
+  // Bg FX
+  const bg = document.getElementById('bgfxGrid'); if(bg){
+    bg.innerHTML = BGFXS.map(b=>`
+      <div class="cust-opt${state.customize.bgfx===b.id?' on':''}" onclick="${state.isPro||b.id==='none'?`selectBgfx('${b.id}')`:`openModal('premModal')`}">
+        <div class="cust-opt-ico" style="font-family:monospace;font-size:20px">${b.icon}</div>
+        <div class="cust-opt-lbl">${b.label}${b.id!=='none'&&!state.isPro?' ✦':''}</div>
+      </div>`).join('');
+  }
+  // Fonts
+  const fg = document.getElementById('fontGrid'); if(fg){
+    fg.innerHTML = FONTS.map(f=>`
+      <div class="cust-opt${state.customize.font===f?' on':''}" onclick="${state.isPro?`selectFont('${f}')`:`openModal('premModal')`}" style="font-family:'${f}',sans-serif">
+        <div class="cust-opt-ico" style="font-size:16px;font-family:'${f}',monospace">Aa</div>
+        <div class="cust-opt-lbl">${f}${!state.isPro?' ✦':''}</div>
+      </div>`).join('');
+  }
+}
+
+function selectTheme(id) {
+  const t = THEMES.find(x=>x.id===id);
+  state.customize.theme = id;
+  state.customize.bg = t.a;
+  state.customize.accent = t.b;
+  document.getElementById('bgColor').value = t.a;
+  document.getElementById('accentColor').value = t.b;
+  document.getElementById('bgPreview').style.background = t.a;
+  document.getElementById('accentPreview').style.background = t.b;
+  document.getElementById('bgHex').textContent = t.a.toUpperCase();
+  document.getElementById('accentHex').textContent = t.b.toUpperCase();
+  renderCustPanels();
+  applyCustomization();
+  toast('Theme: ' + THEMES.find(x=>x.id===id)?.label);
+}
+
+function selectCursor(id) {
+  state.customize.cursor = id;
+  const curClasses=['cur-crosshair','cur-dot','cur-star'];
+  curClasses.forEach(c=>document.body.classList.remove(c));
+  if(id!=='default') document.body.classList.add(id);
+  renderCustPanels();
+  toast('Cursor: ' + CURSORS.find(x=>x.id===id)?.label);
+}
+
+function selectBgfx(id) {
+  state.customize.bgfx = id;
+  runBgfx(id);
+  renderCustPanels();
+  toast('Background: ' + BGFXS.find(x=>x.id===id)?.label);
+}
+
+function selectFont(f) {
+  state.customize.font = f;
+  document.documentElement.style.setProperty('--profile-font', f);
+  document.getElementById('profileCard') && (document.getElementById('profileCard').style.fontFamily = `'${f}',sans-serif`);
+  renderCustPanels();
+  toast('Font: ' + f);
+}
+
+function previewAccent(val) {
+  document.getElementById('accentPreview').style.background = val;
+  document.getElementById('accentHex').textContent = val.toUpperCase();
+  document.documentElement.style.setProperty('--acc', val);
+  state.customize.accent = val;
+}
+
+function previewBg(val) {
+  document.getElementById('bgPreview').style.background = val;
+  document.getElementById('bgHex').textContent = val.toUpperCase();
+  document.getElementById('profileCard') && (document.getElementById('profileCard').style.background = val);
+  state.customize.bg = val;
+}
+
+function previewCardRadius(val) {
+  document.documentElement.style.setProperty('--card-radius', val);
+  state.customize.cardRadius = val;
+}
+
+function applyCustomization() {
+  updateProfileAppearance();
+  renderPhonePreview();
+  toast('Customization saved!');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EDIT PROFILE
+═══════════════════════════════════════════════════════════ */
+function initEmojiPicker() {
+  const el = document.getElementById('emojiPicker'); if(!el) return;
+  el.innerHTML = EMOJIS.map(e=>`<span style="font-size:20px;cursor:pointer;padding:2px;border-radius:3px;transition:background .15s" onclick="selectEmoji('${e}')" onmouseover="this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.background=''">${e}</span>`).join('');
+}
+
+function selectEmoji(e) {
+  state.user.avatar = e;
+  document.getElementById('avatarPreview').textContent = e;
+  renderPhonePreview();
+  renderProfileLinks();
+  toast('Avatar updated');
+}
+
+function handleAvatarUpload(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    state.user.avatar = ev.target.result;
+    document.getElementById('avatarPreview').innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    renderPhonePreview(); renderProfileLinks();
+    toast('Avatar uploaded!');
+  };
+  reader.readAsDataURL(file);
+}
+
+function initSocialInputs() {
+  const el = document.getElementById('socialInputs'); if(!el) return;
+  el.innerHTML = SOCIALS.map(s=>`
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-family:var(--mono);font-size:12px;width:24px;text-align:center;color:rgba(255,255,255,.4)">${s.icon}</span>
+      <input class="finput" placeholder="${s.label} URL" value="${state.user.socials[s.key]||''}" style="flex:1" oninput="state.user.socials['${s.key}']=this.value">
+    </div>`).join('');
+}
+
+function saveProfile() {
+  const name = document.getElementById('editName').value.trim();
+  const username = document.getElementById('editUsername').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  const bio = document.getElementById('editBio').value.trim();
+  const tags = document.getElementById('editTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  if(!name) { toast('Enter a display name'); return; }
+  if(!username) { toast('Enter a username'); return; }
+  state.user = {...state.user, name, username, bio, tags};
+  closeModal('editProfileModal');
+  renderProfileLinks();
+  renderPhonePreview();
+  // update sidebar
+  document.getElementById('dsb-name-el').innerHTML = `${state.user.name} <span class="dsb-badge" id="dsb-plan-badge">${state.isPro?'PRO ✦':'FREE'}</span>`;
+  document.getElementById('dsb-url-el').textContent = `nexus.gg/${state.user.username}`;
+  document.getElementById('settUser').textContent = state.user.username;
+  document.getElementById('settName').textContent = state.user.name;
+  document.getElementById('settUrl').textContent = `nexus.gg/${state.user.username}`;
+  toast('Profile saved!');
+}
+
+function saveDomain() {
+  const d = document.getElementById('customDomainInput').value.trim();
+  if(!d) { toast('Enter a domain'); return; }
+  if(!state.isPro) { openModal('premModal'); return; }
+  toast('Domain ' + d + ' connected!');
+}
+
+function copyProfileLink() {
+  const url = `https://nexus.gg/${state.user.username}`;
+  navigator.clipboard?.writeText(url).catch(()=>{});
+  toast('Link copied: ' + url);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════ */
+// Sidebar item routing (catches items without explicit onclick)
+document.querySelectorAll('.dsb-item[id^=tab-]').forEach(el => {
+  el.addEventListener('click', function() {
+    const id = this.id.replace('tab-','');
+    switchTab(id);
+  });
+});
+
+// Init profile render on load
+renderProfileLinks();
+renderProfileSocials();
+</script>
+</body>
+</html>
